@@ -72,12 +72,21 @@ export function activate(context: vscode.ExtensionContext) {
     else {
       output.appendLine(`Spawning: npx aiken-devtools-mcp ${flags.join(' ')}`);
       child = spawn('npx', ['aiken-devtools-mcp', ...flags], { stdio: 'pipe' });
+
+      // If npx fallback fails, provide a helpful message (package is not published usually)
+      child.on('exit', (code) => {
+        output.appendLine(`Server exited with ${code}`);
+        if (!projectRoot && code !== 0) {
+          vscode.window.showErrorMessage('Failed to start via npx. The package "aiken-devtools-mcp" is not published. To run locally, build the project in your workspace (npm install && npm run build) or set "aikenDevtools.projectRoot" to point to the project root.');
+        }
+      });
     }
 
     child.on('error', (err: Error) => output.appendLine(`Failed to start server: ${err.message}`));
     child.stdout?.on('data', (chunk) => output.appendLine(chunk.toString()));
     child.stderr?.on('data', (chunk) => output.appendLine(chunk.toString()));
-    child.on('exit', (code) => output.appendLine(`Server exited with ${code}`));
+    // child 'exit' already handled in the npx branch above and for local spawn below
+    if (projectRoot) child.on('exit', (code) => output.appendLine(`Server exited with ${code}`));
 
     vscode.window.showInformationMessage('Aiken Devtools MCP started (check Output panel).');
   });
