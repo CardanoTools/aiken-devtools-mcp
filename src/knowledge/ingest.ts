@@ -364,18 +364,104 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
   let html: string;
   if (opts.renderJs) {
     // dynamic import to avoid requiring playwright unless requested
+    let browser: any = undefined;
     try {
       const { chromium } = await import('playwright');
-      const browser = await chromium.launch({ args: ['--no-sandbox'] });
-      const page = await browser.newPage();
-      await page.goto(url, { timeout: 20_000 });
+      browser = await chromium.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
+
+      const context = await browser.newContext({ userAgent: 'aiken-devtools-mcp/1.0 (+https://github.com/CardanoTools/aiken-devtools-mcp)' });
+      const page = await context.newPage();
+
+      // Intercept all requests and block heavy resources and any requests that resolve to private/loopback IPs
+      try {
+        await page.route('**', async (route: any) => {
+          try {
+            const req = route.request();
+            const reqUrl = req.url();
+            const resType = req.resourceType();
+
+            // Block images/fonts/media/styles to reduce external fetching
+            if (['image', 'media', 'font', 'stylesheet'].includes(resType)) {
+              try {
+                await route.abort();
+              } catch {}
+              return;
+            }
+
+            // allow non-http(s) schemes (data:, blob:, about:) to continue
+            let parsed: URL | null = null;
+            try {
+              parsed = new URL(reqUrl);
+            } catch (err) {
+              try {
+                await route.continue();
+              } catch {}
+              return;
+            }
+
+            if (parsed && (parsed.protocol === 'http:' || parsed.protocol === 'https:')) {
+              try {
+                await checkHostSafe(parsed.hostname);
+              } catch (err) {
+                // Abort requests to hosts that resolve to private IPs or fail resolution
+                try {
+                  await route.abort();
+                } catch {}
+                return;
+              }
+            }
+
+            try {
+              await route.continue();
+            } catch {
+              // ignore failures
+            }
+          } catch (err) {
+            try {
+              await route.abort();
+            } catch {}
+          }
+        });
+      } catch (e) {
+        // If route interception fails, continue without it (best-effort)
+      }
+
+      // Navigate (do not wait for all network activity to avoid long waits)
+      await page.goto(url, { timeout: 20_000, waitUntil: 'domcontentloaded' });
       html = await page.content();
-      await browser.close();
+
+      try {
+        await context.close();
+      } catch {}
+      try {
+        await browser.close();
+      } catch {}
     } catch (err) {
-      // fallback to basic fetch
-      const fetched = await fetchUrl(url, Math.max(10000, maxChars * 2));
-      if (!fetched.ok) throw new Error(`Failed to fetch ${url}: ${fetched.error}`);
-      html = fetched.body;
+      // fallback: if the URL is a data: URL, decode it; otherwise try a plain fetch
+      if (browser) {
+        try {
+          await browser.close();
+        } catch {}
+      }
+
+      try {
+        const p = new URL(url);
+        if (p.protocol === 'data:') {
+          const idx = url.indexOf(',');
+          const payload = idx >= 0 ? url.slice(idx + 1) : '';
+          try {
+            html = decodeURIComponent(payload);
+          } catch {
+            html = payload;
+          }
+        } else {
+          const fetched = await fetchUrl(url, Math.max(10000, maxChars * 2));
+          if (!fetched.ok) throw new Error(`Failed to fetch ${url}: ${fetched.error}`);
+          html = fetched.body;
+        }
+      } catch (err2) {
+        throw err2 instanceof Error ? err2 : new Error(String(err2));
+      }
     }
   } else {
     const fetched = await fetchUrl(url, Math.max(10000, maxChars * 2));
