@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/106</span>
+                <span class='fraction'>0/107</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/106</span>
+                <span class='fraction'>0/107</span>
             </div>
         
             
@@ -243,7 +243,9 @@
 <a name='L178'></a><a href='#L178'>178</a>
 <a name='L179'></a><a href='#L179'>179</a>
 <a name='L180'></a><a href='#L180'>180</a>
-<a name='L181'></a><a href='#L181'>181</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -284,6 +286,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -381,6 +384,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -427,42 +431,43 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 &nbsp;
-import { attachPolicyWrapper } from "./serverWrapper";
-import { registerAikenBuildTool } from "./tools/aikenBuild";
-import { registerAikenBlueprintAddressTool } from "./tools/aikenBlueprintAddress";
-import { registerAikenBlueprintApplyTool } from "./tools/aikenBlueprintApply";
-import { registerAikenBlueprintConvertTool } from "./tools/aikenBlueprintConvert";
-import { registerAikenBlueprintExportCardanoCliTool } from "./tools/aikenBlueprintExportCardanoCli";
-import { registerAikenBlueprintGetValidatorTool } from "./tools/aikenBlueprintGetValidator";
-import { registerAikenBlueprintHashTool } from "./tools/aikenBlueprintHash";
-import { registerAikenBlueprintIntegrationBundleTool } from "./tools/aikenBlueprintIntegrationBundle";
-import { registerAikenBlueprintIntegrationBundleAllTool } from "./tools/aikenBlueprintIntegrationBundleAll";
-import { registerAikenBlueprintIntegrationBundleByTitleTool } from "./tools/aikenBlueprintIntegrationBundleByTitle";
-import { registerAikenBlueprintListValidatorsTool } from "./tools/aikenBlueprintListValidators";
-import { registerAikenBlueprintPreambleTool } from "./tools/aikenBlueprintPreamble";
-import { registerAikenBlueprintPolicyTool } from "./tools/aikenBlueprintPolicy";
-import { registerAikenCheckTool } from "./tools/aikenCheck";
-import { registerAikenCodegenLucidEvolutionTool } from "./tools/aikenCodegenLucidEvolution";
-import { registerAikenCodegenEvolutionSdkTool } from "./tools/aikenCodegenEvolutionSdk";
-import { registerAikenDocsTool } from "./tools/aikenDocs";
-import { registerAikenFmtTool } from "./tools/aikenFmt";
-import { registerAikenKnowledgeReadFileTool } from "./tools/aikenKnowledgeReadFile";
-import { registerAikenKnowledgeSearchTool } from "./tools/aikenKnowledgeSearch";
-import { registerAikenKnowledgeSyncTool } from "./tools/aikenKnowledgeSync";
-import { registerAikenKnowledgeListTool } from "./tools/aikenKnowledgeList";
-import { registerAikenKnowledgeAddTool } from "./tools/aikenKnowledgeAdd";
-import { registerAikenKnowledgeIngestTool } from "./tools/aikenKnowledgeIngest";
-import { registerAikenKnowledgeBulkIngestTool } from "./tools/aikenKnowledgeBulkIngest";
-import { registerAikenKnowledgeProposalsListTool } from "./tools/aikenKnowledgeProposalsList";
-import { registerAikenKnowledgeApproveTool } from "./tools/aikenKnowledgeApprove";
-import { registerAikenKnowledgeIndexTool } from "./tools/aikenKnowledgeIndex";
-import { registerAikenServerManifestTool } from "./tools/aikenServerManifest";
-import { registerAikenToolsCatalogTool } from "./tools/aikenToolsCatalog";
-import { registerAikenToolsetsTools } from "./tools/aikenToolsets";
-import { registerAikenToolSearchTool } from "./tools/aikenToolSearch";
-import { registerAikenTestTool } from "./tools/aikenTest";
-import { registerAikenNewTool } from "./tools/aikenNew";
-import { registerAikenVersionTool } from "./tools/aikenVersion";
+import { attachPolicyWrapper } from "./serverWrapper.js";
+import { registerAikenBuildTool } from "./tools/project/aikenBuild.js";
+import { registerAikenBlueprintAddressTool } from "./tools/blueprint/aikenBlueprintAddress.js";
+import { registerAikenBlueprintApplyTool } from "./tools/blueprint/aikenBlueprintApply.js";
+import { registerAikenBlueprintConvertTool } from "./tools/blueprint/aikenBlueprintConvert.js";
+import { registerAikenBlueprintExportCardanoCliTool } from "./tools/blueprint/aikenBlueprintExportCardanoCli.js";
+import { registerAikenBlueprintGetValidatorTool } from "./tools/blueprint/aikenBlueprintGetValidator.js";
+import { registerAikenBlueprintHashTool } from "./tools/blueprint/aikenBlueprintHash.js";
+import { registerAikenBlueprintIntegrationBundleTool } from "./tools/blueprint/aikenBlueprintIntegrationBundle.js";
+import { registerAikenBlueprintIntegrationBundleAllTool } from "./tools/blueprint/aikenBlueprintIntegrationBundleAll.js";
+import { registerAikenBlueprintIntegrationBundleByTitleTool } from "./tools/blueprint/aikenBlueprintIntegrationBundleByTitle.js";
+import { registerAikenBlueprintListValidatorsTool } from "./tools/blueprint/aikenBlueprintListValidators.js";
+import { registerAikenBlueprintPreambleTool } from "./tools/blueprint/aikenBlueprintPreamble.js";
+import { registerAikenBlueprintPolicyTool } from "./tools/blueprint/aikenBlueprintPolicy.js";
+import { registerAikenCheckTool } from "./tools/project/aikenCheck.js";
+import { registerAikenCodegenLucidEvolutionTool } from "./tools/codegen/aikenCodegenLucidEvolution.js";
+import { registerAikenCodegenEvolutionSdkTool } from "./tools/codegen/aikenCodegenEvolutionSdk.js";
+import { registerAikenDocsTool } from "./tools/project/aikenDocs.js";
+import { registerAikenFmtTool } from "./tools/project/aikenFmt.js";
+import { registerAikenKnowledgeReadFileTool } from "./tools/knowledge/aikenKnowledgeReadFile.js";
+import { registerAikenKnowledgeSearchTool } from "./tools/knowledge/aikenKnowledgeSearch.js";
+import { registerAikenKnowledgeSyncTool } from "./tools/knowledge/aikenKnowledgeSync.js";
+import { registerAikenKnowledgeListTool } from "./tools/knowledge/aikenKnowledgeList.js";
+import { registerAikenKnowledgeAddTool } from "./tools/knowledge/aikenKnowledgeAdd.js";
+import { registerAikenKnowledgeIngestTool } from "./tools/knowledge/aikenKnowledgeIngest.js";
+import { registerAikenKnowledgeBulkIngestTool } from "./tools/knowledge/aikenKnowledgeBulkIngest.js";
+import { registerAikenKnowledgeProposalsListTool } from "./tools/knowledge/aikenKnowledgeProposalsList.js";
+import { registerAikenKnowledgeApproveTool } from "./tools/knowledge/aikenKnowledgeApprove.js";
+import { registerAikenKnowledgeIndexTool } from "./tools/knowledge/aikenKnowledgeIndex.js";
+import { registerAikenServerManifestTool } from "./tools/discovery/aikenServerManifest.js";
+import { registerAikenToolsCatalogTool } from "./tools/discovery/aikenToolsCatalog.js";
+import { registerAikenToolsetsTools } from "./tools/discovery/aikenToolsets.js";
+import { registerAikenToolSearchTool } from "./tools/discovery/aikenToolSearch.js";
+import { registerAikenTestTool } from "./tools/project/aikenTest.js";
+import { registerAikenNewTool } from "./tools/project/aikenNew.js";
+import { registerAikenExampleTool } from "./tools/project/aikenExample.js";
+import { registerAikenVersionTool } from "./tools/project/aikenVersion.js";
 &nbsp;
 <span class="cstat-no" title="statement not covered" >export function createAikenDevtoolsServer(): McpServer {</span>
 <span class="cstat-no" title="statement not covered" >  const server = new McpServer(</span>
@@ -568,6 +573,7 @@ Use the knowledge search tools to find examples and documentation.`
 <span class="cstat-no" title="statement not covered" >  registerAikenFmtTool(server);</span>
 <span class="cstat-no" title="statement not covered" >  registerAikenDocsTool(server);</span>
 <span class="cstat-no" title="statement not covered" >  registerAikenNewTool(server);</span>
+<span class="cstat-no" title="statement not covered" >  registerAikenExampleTool(server);</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  registerAikenBlueprintPreambleTool(server);</span>
 <span class="cstat-no" title="statement not covered" >  registerAikenBlueprintListValidatorsTool(server);</span>
@@ -610,7 +616,7 @@ Use the knowledge search tools to find examples and documentation.`
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-01-27T19:37:10.223Z
+                at 2026-01-27T20:43:58.513Z
             </div>
         <script src="../prettify.js"></script>
         <script>
