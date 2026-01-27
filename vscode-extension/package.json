@@ -8,7 +8,11 @@
     "vscode": "^1.108.0"
   },
   "activationEvents": [
-    "onCommand:aiken-devtools.start"
+    "onCommand:aiken-devtools.start",
+    "onCommand:aiken-devtools.stop",
+    "onCommand:aiken-devtools.restart",
+    "onCommand:aiken-devtools.showLogs",
+    "onCommand:aiken-devtools.openMenu"
   ],
   "repository": {
     "type": "git",
@@ -20,6 +24,22 @@
       {
         "command": "aiken-devtools.start",
         "title": "Aiken Devtools: Start"
+      },
+      {
+        "command": "aiken-devtools.stop",
+        "title": "Aiken Devtools: Stop"
+      },
+      {
+        "command": "aiken-devtools.restart",
+        "title": "Aiken Devtools: Restart"
+      },
+      {
+        "command": "aiken-devtools.showLogs",
+        "title": "Aiken Devtools: Show Logs"
+      },
+      {
+        "command": "aiken-devtools.openMenu",
+        "title": "Aiken Devtools: Actions"
       }
     ],
     "configuration": {

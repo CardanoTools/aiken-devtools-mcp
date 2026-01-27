@@ -6,7 +6,27 @@ import { spawn } from 'child_process';
 export function activate(context: vscode.ExtensionContext) {
   const output = vscode.window.createOutputChannel('Aiken Devtools (MCP)');
 
-  const startCmd = vscode.commands.registerCommand('aiken-devtools.start', async () => {
+  // status bar to show running/stopped state and offer quick actions
+  const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  statusBar.command = 'aiken-devtools.openMenu';
+  statusBar.show();
+
+  let currentChild: import('child_process').ChildProcess | null = null;
+  let currentProjectRoot: string | undefined = undefined;
+  let stopping = false;
+
+  function updateStatus() {
+    if (currentChild) {
+      statusBar.text = '$(server) Aiken Devtools: Running';
+      statusBar.tooltip = 'Aiken Devtools MCP is running. Click for actions.';
+    }
+    else {
+      statusBar.text = '$(circle-slash) Aiken Devtools: Stopped';
+      statusBar.tooltip = 'Aiken Devtools MCP is stopped. Click for actions.';
+    }
+  }
+
+  async function gatherFlagsAndProjectRoot() {
     const config = vscode.workspace.getConfiguration('aikenDevtools');
     const allow = config.get<string[]>('allowTools') || [];
 
@@ -63,15 +83,30 @@ export function activate(context: vscode.ExtensionContext) {
       if (!projectRoot && fs.existsSync(path.join(process.cwd(), 'dist', 'index.js'))) projectRoot = process.cwd();
     }
 
-    let child;
+    return { flags, projectRoot };
+  }
+
+  async function startServer() {
+    if (currentChild) {
+      const should = await vscode.window.showWarningMessage('Aiken Devtools MCP is already running. Restart?', 'Restart', 'Cancel');
+      if (should !== 'Restart') return;
+      await restartServer();
+      return;
+    }
+
+    const { flags, projectRoot } = await gatherFlagsAndProjectRoot();
+
+    let child: import('child_process').ChildProcess;
     if (projectRoot && fs.existsSync(path.join(projectRoot, 'dist', 'index.js'))) {
       const local = path.join(projectRoot, 'dist', 'index.js');
       output.appendLine(`Spawning local node: ${process.execPath} ${local} ${flags.join(' ')}`);
       child = spawn(process.execPath, [local, ...flags], { cwd: projectRoot, stdio: 'pipe' });
+      currentProjectRoot = projectRoot;
     }
     else {
       output.appendLine(`Spawning: npx aiken-devtools-mcp ${flags.join(' ')}`);
       child = spawn('npx', ['aiken-devtools-mcp', ...flags], { stdio: 'pipe' });
+      currentProjectRoot = undefined;
 
       // If npx fallback fails, provide a helpful message (package is not published usually)
       child.on('exit', (code) => {
@@ -82,17 +117,104 @@ export function activate(context: vscode.ExtensionContext) {
       });
     }
 
-    child.on('error', (err: Error) => output.appendLine(`Failed to start server: ${err.message}`));
+    currentChild = child;
+    updateStatus();
+
+    child.on('error', (err: Error) => {
+      output.appendLine(`Failed to start server: ${err.message}`);
+      currentChild = null;
+      updateStatus();
+    });
+
     child.stdout?.on('data', (chunk) => output.appendLine(chunk.toString()));
     child.stderr?.on('data', (chunk) => output.appendLine(chunk.toString()));
-    // child 'exit' already handled in the npx branch above and for local spawn below
-    if (projectRoot) child.on('exit', (code) => output.appendLine(`Server exited with ${code}`));
+
+    child.on('exit', (code, signal) => {
+      output.appendLine(`Server exited with ${code} ${signal ? `signal=${signal}` : ''}`);
+      currentChild = null;
+      updateStatus();
+    });
 
     vscode.window.showInformationMessage('Aiken Devtools MCP started (check Output panel).');
+  }
+
+  async function stopServer(timeout = 5000) {
+    if (!currentChild) {
+      vscode.window.showInformationMessage('Aiken Devtools MCP is not running.');
+      return true;
+    }
+
+    if (stopping) return false;
+    stopping = true;
+
+    output.appendLine('Stopping Aiken Devtools MCP...');
+
+    return await new Promise<boolean>((resolve) => {
+      let resolved = false;
+
+      const onExit = () => {
+        if (resolved) return;
+        resolved = true;
+        stopping = false;
+        currentChild = null;
+        updateStatus();
+        output.appendLine('Aiken Devtools MCP stopped.');
+        resolve(true);
+      };
+
+      currentChild!.once('exit', onExit);
+
+      try {
+        // ask nicely first
+        currentChild!.kill('SIGINT');
+      }
+      catch (e) {
+        // ignore
+      }
+
+      const t1 = setTimeout(() => {
+        if (resolved) return;
+        try { currentChild!.kill('SIGTERM'); } catch { }
+      }, 3000);
+
+      const t2 = setTimeout(() => {
+        if (resolved) return;
+        try { currentChild!.kill('SIGKILL'); } catch { }
+      }, timeout);
+
+      // fallback: if child already exited, onExit will resolve
+    });
+  }
+
+  async function restartServer() {
+    await stopServer();
+    await startServer();
+  }
+
+  // Commands
+  const startCmd = vscode.commands.registerCommand('aiken-devtools.start', async () => startServer());
+  const stopCmd = vscode.commands.registerCommand('aiken-devtools.stop', async () => stopServer());
+  const restartCmd = vscode.commands.registerCommand('aiken-devtools.restart', async () => restartServer());
+  const showLogsCmd = vscode.commands.registerCommand('aiken-devtools.showLogs', () => output.show(true));
+
+  const openMenuCmd = vscode.commands.registerCommand('aiken-devtools.openMenu', async () => {
+    const pick = await vscode.window.showQuickPick([
+      { label: 'Start Server', id: 'start' },
+      { label: 'Stop Server', id: 'stop' },
+      { label: 'Restart Server', id: 'restart' },
+      { label: 'Show Logs', id: 'logs' }
+    ]);
+    if (!pick) return;
+    if (pick.id === 'start') await startServer();
+    if (pick.id === 'stop') await stopServer();
+    if (pick.id === 'restart') await restartServer();
+    if (pick.id === 'logs') output.show(true);
   });
 
-  context.subscriptions.push(startCmd, output);
+  context.subscriptions.push(startCmd, stopCmd, restartCmd, showLogsCmd, openMenuCmd, output, statusBar);
+  updateStatus();
 }
+
 
 export function deactivate() {
   // no-op
