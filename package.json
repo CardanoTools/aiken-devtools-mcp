@@ -27,7 +27,8 @@
     "dev": "node --watch dist/index.js",
     "clean": "rm -rf dist",
     "import:awesome": "node scripts/import-awesome-aiken.js",
-    "tool-search": "node scripts/tool-search.js"
+    "tool-search": "node scripts/tool-search.js",
+    "test:example": "node scripts/test-example-tool.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.3",

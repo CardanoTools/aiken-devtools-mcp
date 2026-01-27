@@ -227,6 +227,13 @@
       "description": "Return a categorized listing of available tools for host discovery.",
       "safety": "safe",
       "category": "discovery"
+    },
+    {
+      "name": "aiken_example",
+      "title": "Aiken: example",
+      "description": "A minimal example tool used for testing and docs.",
+      "safety": "safe",
+      "category": "project"
     }
   ],
   "toolsets": {
@@ -241,7 +248,8 @@
       "aiken_test",
       "aiken_fmt",
       "aiken_docs",
-      "aiken_blueprint_apply"
+      "aiken_blueprint_apply",
+      "aiken_example"
     ],
     "blueprint": [
       "aiken_blueprint_preamble",

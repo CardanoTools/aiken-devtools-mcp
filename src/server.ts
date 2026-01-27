@@ -37,6 +37,7 @@ import { registerAikenToolsetsTools } from "./tools/discovery/aikenToolsets.js";
 import { registerAikenToolSearchTool } from "./tools/discovery/aikenToolSearch.js";
 import { registerAikenTestTool } from "./tools/project/aikenTest.js";
 import { registerAikenNewTool } from "./tools/project/aikenNew.js";
+import { registerAikenExampleTool } from "./tools/project/aikenExample.js";
 import { registerAikenVersionTool } from "./tools/project/aikenVersion.js";
 
 export function createAikenDevtoolsServer(): McpServer {
@@ -143,6 +144,7 @@ Use the knowledge search tools to find examples and documentation.`
   registerAikenFmtTool(server);
   registerAikenDocsTool(server);
   registerAikenNewTool(server);
+  registerAikenExampleTool(server);
 
   registerAikenBlueprintPreambleTool(server);
   registerAikenBlueprintListValidatorsTool(server);

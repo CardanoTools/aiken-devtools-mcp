@@ -43,3 +43,45 @@ Notes & conventions
 - Audit logs are written to `audit.log` (sensitive fields are redacted).
 
 If any section is unclear or you want examples expanded (e.g., a sample `register` implementation or a checklist for adding tests), tell me which area to expand and I will update this file.
+
+Example — register a minimal MCP tool
+
+Below is a canonical minimal tool registration (TypeScript). Put this in `src/tools/<category>/aikenExample.ts` and import + call it from `src/server.ts`.
+
+```typescript
+import { z } from "zod";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+
+const inputSchema = z.object({ name: z.string().describe("A name for the example") }).strict();
+const outputSchema = z.object({ message: z.string() }).strict();
+
+export function registerAikenExampleTool(server: McpServer): void {
+	server.registerTool(
+		"aiken_example",
+		{
+			title: "Aiken: example",
+			description: "Small example tool showing patterns used in this repo.",
+			inputSchema,
+			outputSchema,
+			annotations: {
+				readOnlyHint: true,
+				idempotentHint: true,
+				destructiveHint: false
+			}
+		},
+		async ({ name }) => {
+			return { message: `hello ${name}` };
+		}
+	);
+}
+```
+
+Register it in `src/server.ts`:
+
+```ts
+import { registerAikenExampleTool } from "./tools/project/aikenExample.js";
+// ...
+registerAikenExampleTool(server);
+```
+
+This pattern uses `zod` input/output schemas and `annotations` to make tools self-describing for clients and the `attachPolicyWrapper` to apply safety/readonly rules.
