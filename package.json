@@ -1,0 +1,36 @@
+{
+  "name": "cardano-mcp",
+  "version": "1.0.0",
+  "description": "aiken-devtools - MCP tools for Aiken smart contract development",
+  "main": "dist/index.js",
+  "bin": {
+    "aiken-devtools": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "node --watch dist/index.js",
+    "clean": "rm -rf dist",
+    "test": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CardanoTools/cardano-mcp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/CardanoTools/cardano-mcp/issues"
+  },
+  "homepage": "https://github.com/CardanoTools/cardano-mcp#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "typescript": "^5.9.3"
+  }
+}
