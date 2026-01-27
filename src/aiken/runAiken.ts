@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 
+const MAX_OUTPUT_SIZE = 10 * 1024 * 1024; // 10MB limit for stdout/stderr
+
 export type RunAikenArgs = {
   cwd: string;
   args: string[];
@@ -69,11 +71,15 @@ export async function runAiken(params: RunAikenArgs): Promise<RunAikenResult> {
     child.stderr.setEncoding("utf8");
 
     child.stdout.on("data", (chunk) => {
-      stdout += chunk;
+      if (stdout.length < MAX_OUTPUT_SIZE) {
+        stdout += chunk;
+      }
     });
 
     child.stderr.on("data", (chunk) => {
-      stderr += chunk;
+      if (stderr.length < MAX_OUTPUT_SIZE) {
+        stderr += chunk;
+      }
     });
 
     child.on("error", (error) => {
