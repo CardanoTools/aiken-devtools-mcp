@@ -8,6 +8,7 @@ export const CUSTOM_ADDED_SOURCES: KnowledgeSourceSpec[] = [
   // Additional curated references added for Copilot agents and knowledge ingestion
   { id: "aiken-awesome", remoteUrl: "https://github.com/aiken-lang/awesome-aiken.git", defaultRef: "main", folderName: "aiken-lang-awesome-aiken", description: "Awesome Aiken: curated list of Aiken resources (docs, libraries, examples)", category: "documentation" },
   { id: "mesh-aiken-template", remoteUrl: "https://github.com/MeshJS/aiken-next-ts-template.git", defaultRef: "main", folderName: "mesh-aiken-next-ts-template", description: "MeshJS Aiken Next.js TypeScript template: end-to-end Aiken + frontend example", category: "example" },
-  { id: "cardano-academy-aiken-course", remoteUrl: "https://cardanofoundation.org/academy/course/aiken-eutxo-smart-contracts-cardano", defaultRef: "main", folderName: "cardano-academy-aiken-course", description: "Cardano Academy: 'Aiken: EUTxO Smart Contracts on Cardano' course (video + materials)", category: "documentation" }
-]
+  { id: "cardano-academy-aiken-course", remoteUrl: "https://cardanofoundation.org/academy/course/aiken-eutxo-smart-contracts-cardano", defaultRef: "main", folderName: "cardano-academy-aiken-course", description: "Cardano Academy: 'Aiken: EUTxO Smart Contracts on Cardano' course (video + materials)", category: "documentation" },
+  { id: "aiken-setup", remoteUrl: "https://github.com/aiken-lang/setup-aiken.git", defaultRef: "main", folderName: "aiken-lang-setup-aiken", description: "GitHub Action 'setup-aiken' for installing and using Aiken in CI workflows", category: "library" }
+];
 

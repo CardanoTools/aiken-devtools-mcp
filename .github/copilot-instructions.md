@@ -38,6 +38,7 @@ Useful Aiken knowledge links
 - Lucid Evolution (Evolution SDK): https://github.com/Anastasia-Labs/lucid-evolution
 - MeshJS Aiken guide & template: https://meshjs.dev/guides/aiken and https://github.com/MeshJS/aiken-next-ts-template
 - Cardano Academy course (Aiken EUTxO): https://cardanofoundation.org/academy/course/aiken-eutxo-smart-contracts-cardano
+- setup-aiken GitHub Action (install Aiken in CI): https://github.com/aiken-lang/setup-aiken
 
 Local knowledge artifacts (in-repo)
 - `src/knowledge/data/awesome/awesomeAiken.ts` — generated list from Awesome Aiken
