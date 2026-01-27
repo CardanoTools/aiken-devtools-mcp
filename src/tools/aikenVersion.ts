@@ -11,7 +11,7 @@ const inputSchema = z
       .optional()
       .describe("Project directory (relative to the current workspace). Defaults to workspace root.")
   })
-  .strict();
+  .strict() as z.ZodTypeAny;
 
 const outputSchema = z
   .object({
@@ -23,7 +23,7 @@ const outputSchema = z
     stderr: z.string(),
     durationMs: z.number()
   })
-  .strict();
+  .strict() as z.ZodTypeAny;
 
 export function registerAikenVersionTool(server: McpServer): void {
   server.registerTool(
@@ -40,7 +40,8 @@ export function registerAikenVersionTool(server: McpServer): void {
         openWorldHint: false
       }
     },
-    async ({ projectDir }) => {
+    async (input: { projectDir?: string }) => {
+      const { projectDir } = input;
       const workspaceRoot = process.cwd();
       const cwd = resolveWorkspacePath(workspaceRoot, projectDir);
       const result = await runAiken({ cwd, args: ["--version"], timeoutMs: 20_000 });

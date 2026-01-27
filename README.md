@@ -34,6 +34,13 @@ MCP (Model Context Protocol) tools for coding agents to understand, develop, and
 - `aiken_codegen_lucid_evolution`: generates a TypeScript snippet for `@lucid-evolution/lucid` from a validator (via `aiken blueprint convert --to cardano-cli`).
 - `aiken_codegen_evolution_sdk`: (preferred) generates a TypeScript snippet using `@evolution-sdk/evolution` packages from `IntersectMBO/evolution-sdk`.
 
+## Recommended workflow
+
+1) Build artifacts: run `aiken_build`.
+2) Inspect blueprint: use `aiken_blueprint_list_validators` (read module/validator) or `aiken_blueprint_get_validator` (inspect one entry).
+3) Integration outputs: use `aiken_blueprint_integration_bundle` (single), `aiken_blueprint_integration_bundle_by_title` (by blueprint title), or `aiken_blueprint_integration_bundle_all` (all validators).
+4) App codegen: use `aiken_codegen_evolution_sdk` (preferred) or `aiken_codegen_lucid_evolution`.
+
 ## Examples
 
 ### Integration bundle (with Evolution SDK snippet)
@@ -67,6 +74,34 @@ Request (tool input):
 ```
 
 Returns `bundle` with the same structure as `aiken_blueprint_integration_bundle`.
+
+### Integration bundle (all validators)
+
+Request (tool input):
+
+```
+{
+	"projectDir": ".",
+	"blueprintPath": "plutus.json",
+	"includeEvolutionSdkSnippet": true,
+	"evolutionOutputDir": "artifacts/snippets"
+}
+```
+
+Returns `results[]` entries containing per-validator `hash`, `address`, `policyId`, plus optional `evolutionSdkSnippetTs` and `writtenEvolutionSnippetFile`.
+
+### Knowledge search (stdlib/prelude/evolution-sdk)
+
+Request (tool input):
+
+```
+{
+	"query": "ScriptHash.fromScript",
+	"scope": "evolution-sdk"
+}
+```
+
+Returns matching file paths + line snippets from the cached knowledge repos.
 
 ### Codegen (preferred, Evolution SDK)
 
