@@ -18,34 +18,50 @@ export function activate(context: vscode.ExtensionContext) {
     const noReadonly = config.get<boolean>('disableReadonly') ?? false;
     if (noReadonly) flags.push('--no-readonly');
 
-    // Try to find a local copy of the server (prefer workspace root that matches package name or contains dist)
-    const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
-    let projectRoot: string | undefined;
+    // If user has configured a specific projectRoot, prefer that
+    const cfgProjectRoot = config.get<string>('projectRoot');
+    let projectRoot: string | undefined = undefined;
 
-    for (const wf of workspaceFolders) {
-      const p = wf.uri.fsPath;
-      const pkg = path.join(p, 'package.json');
-      const dist = path.join(p, 'dist', 'index.js');
-      if (fs.existsSync(pkg)) {
-        try {
-          const parsed = JSON.parse(fs.readFileSync(pkg, 'utf8'));
-          if (parsed && (parsed.name === 'aiken-devtools-mcp' || fs.existsSync(dist))) {
-            projectRoot = p;
-            break;
-          }
-        }
-        catch {
-          // ignore
-        }
+    if (cfgProjectRoot) {
+      // resolve relative paths against the first workspace folder, or process.cwd()
+      const base = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0]) ? vscode.workspace.workspaceFolders[0].uri.fsPath : process.cwd();
+      const resolved = path.isAbsolute(cfgProjectRoot) ? cfgProjectRoot : path.join(base, cfgProjectRoot);
+      if (fs.existsSync(path.join(resolved, 'dist', 'index.js'))) {
+        projectRoot = resolved;
       }
-      else if (fs.existsSync(dist)) {
-        projectRoot = p;
-        break;
+      else {
+        output.appendLine(`Configured projectRoot ${resolved} does not contain dist/index.js`);
       }
     }
 
-    // fallback to current working directory
-    if (!projectRoot && fs.existsSync(path.join(process.cwd(), 'dist', 'index.js'))) projectRoot = process.cwd();
+    // Try to find a local copy of the server (prefer workspace root that matches package name or contains dist)
+    if (!projectRoot) {
+      const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
+      for (const wf of workspaceFolders) {
+        const p = wf.uri.fsPath;
+        const pkg = path.join(p, 'package.json');
+        const dist = path.join(p, 'dist', 'index.js');
+        if (fs.existsSync(pkg)) {
+          try {
+            const parsed = JSON.parse(fs.readFileSync(pkg, 'utf8'));
+            if (parsed && (parsed.name === 'aiken-devtools-mcp' || fs.existsSync(dist))) {
+              projectRoot = p;
+              break;
+            }
+          }
+          catch {
+            // ignore
+          }
+        }
+        else if (fs.existsSync(dist)) {
+          projectRoot = p;
+          break;
+        }
+      }
+
+      // fallback to current working directory
+      if (!projectRoot && fs.existsSync(path.join(process.cwd(), 'dist', 'index.js'))) projectRoot = process.cwd();
+    }
 
     let child;
     if (projectRoot && fs.existsSync(path.join(projectRoot, 'dist', 'index.js'))) {

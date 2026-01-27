@@ -36,6 +36,10 @@
         "aikenDevtools.disableReadonly": {
           "type": "boolean",
           "description": "Disable readonly mode when launching the server (not recommended)."
+        },
+        "aikenDevtools.projectRoot": {
+          "type": "string",
+          "description": "Optional workspace-relative path or absolute path to the Aiken Devtools project root. If set, the extension will use this path to find the local server (dist/index.js)."
         }
       }
     }
