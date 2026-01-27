@@ -7,6 +7,7 @@ export * from "./aikenSite.js";
 export * from "./evolutionDocs.js";
 export * from "./assistDocs.js";
 export * from "../awesome/awesomeAiken.js";
+export * from "./customAdded.js";
 
 import { KnowledgeSourceSpec } from "../types.js";
 import { AIKEN_SITE_SOURCES } from "./aikenSite.js";

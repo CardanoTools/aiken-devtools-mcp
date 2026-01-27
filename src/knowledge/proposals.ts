@@ -32,7 +32,7 @@ async function parseProposalFile(filePath: string): Promise<Proposal> {
   // JSON spec block
   const jsonMatch = raw.match(/```json\n([\s\S]*?)\n```/i);
   let spec: KnowledgeSourceSpec | undefined = undefined;
-  if (jsonMatch) {
+  if (jsonMatch && typeof jsonMatch[1] === "string") {
     try {
       spec = JSON.parse(jsonMatch[1]);
     } catch {
