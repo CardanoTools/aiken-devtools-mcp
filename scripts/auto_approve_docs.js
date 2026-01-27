@@ -42,7 +42,7 @@
       // remove proposal file if created to reduce noise
       if (res.proposalPath) {
         try {
-          await fsp.unlink(res.proposalPath).catch(() => {});
+          await fsp.unlink(res.proposalPath).catch(() => { });
           console.log('Removed proposal file', res.proposalPath);
         } catch (err) {
           // ignore
