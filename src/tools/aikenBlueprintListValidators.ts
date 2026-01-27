@@ -24,6 +24,8 @@ const inputSchema = z
 const validatorSummarySchema = z
   .object({
     title: z.string(),
+    module: z.string().optional(),
+    validator: z.string().optional(),
     hash: z.string().optional(),
     hasDatum: z.boolean(),
     hasRedeemer: z.boolean(),
@@ -70,6 +72,14 @@ export function registerAikenBlueprintListValidatorsTool(server: McpServer): voi
           const title = getOptionalString(validator, "title") ?? "";
           if (!title.length) return null;
 
+          let moduleName: string | undefined;
+          let validatorName: string | undefined;
+          const lastDot = title.lastIndexOf(".");
+          if (lastDot > 0 && lastDot < title.length - 1) {
+            moduleName = title.slice(0, lastDot);
+            validatorName = title.slice(lastDot + 1);
+          }
+
           const hash = getOptionalString(validator, "hash");
           const compiledCode = getOptionalString(validator, "compiledCode") ?? getOptionalString(validator, "compiled_code");
 
@@ -82,6 +92,8 @@ export function registerAikenBlueprintListValidatorsTool(server: McpServer): voi
 
           const summary: z.infer<typeof validatorSummarySchema> = {
             title,
+            module: moduleName,
+            validator: validatorName,
             hash,
             hasDatum,
             hasRedeemer,

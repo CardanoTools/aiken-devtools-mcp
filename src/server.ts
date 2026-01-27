@@ -8,6 +8,8 @@ import { registerAikenBlueprintExportCardanoCliTool } from "./tools/aikenBluepri
 import { registerAikenBlueprintGetValidatorTool } from "./tools/aikenBlueprintGetValidator";
 import { registerAikenBlueprintHashTool } from "./tools/aikenBlueprintHash";
 import { registerAikenBlueprintIntegrationBundleTool } from "./tools/aikenBlueprintIntegrationBundle";
+import { registerAikenBlueprintIntegrationBundleAllTool } from "./tools/aikenBlueprintIntegrationBundleAll";
+import { registerAikenBlueprintIntegrationBundleByTitleTool } from "./tools/aikenBlueprintIntegrationBundleByTitle";
 import { registerAikenBlueprintListValidatorsTool } from "./tools/aikenBlueprintListValidators";
 import { registerAikenBlueprintPreambleTool } from "./tools/aikenBlueprintPreamble";
 import { registerAikenBlueprintPolicyTool } from "./tools/aikenBlueprintPolicy";
@@ -52,6 +54,8 @@ export function createAikenDevtoolsServer(): McpServer {
   registerAikenBlueprintConvertTool(server);
   registerAikenBlueprintExportCardanoCliTool(server);
   registerAikenBlueprintIntegrationBundleTool(server);
+  registerAikenBlueprintIntegrationBundleAllTool(server);
+  registerAikenBlueprintIntegrationBundleByTitleTool(server);
   registerAikenBlueprintApplyTool(server);
 
   registerAikenKnowledgeSyncTool(server);
