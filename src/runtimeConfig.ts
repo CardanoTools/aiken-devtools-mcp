@@ -10,6 +10,11 @@ export type PolicySpec = {
 export const runtimeConfig = {
   readonly: true, // default to safe mode
   allowedTools: new Set<string>(), // explicit allowlist from CLI (empty = no CLI restriction)
+  allowedToolsets: new Set<string>(), // explicit toolset allowlist (by name)
+  toolsetsMap: {} as Record<string, string[]>, // populated from manifest
+  dynamicToolsets: false, // allow enabling toolsets at runtime
+  insiders: false, // allow experimental/insiders tools
+  lockdownMode: false, // restrict content surfaced by tools
   logFilePath: path.join(process.cwd(), "audit.log"),
   transport: "stdio" as "stdio" | "tcp" | "ws",
   port: undefined as number | undefined,
@@ -35,16 +40,36 @@ export function applyCliOptions(opts: Partial<typeof runtimeConfig>): void {
   if (Array.isArray((opts as any).allowedTools)) {
     runtimeConfig.allowedTools = new Set((opts as any).allowedTools as string[]);
   }
+  if (Array.isArray((opts as any).toolsets)) {
+    runtimeConfig.allowedToolsets = new Set((opts as any).toolsets as string[]);
+  }
+  if (typeof (opts as any).dynamicToolsets === "boolean") runtimeConfig.dynamicToolsets = (opts as any).dynamicToolsets;
+  if (typeof (opts as any).insiders === "boolean") runtimeConfig.insiders = (opts as any).insiders;
+  if (typeof (opts as any).lockdownMode === "boolean") runtimeConfig.lockdownMode = (opts as any).lockdownMode;
 }
 
 export function setAllowedTools(list: string[]): void {
   runtimeConfig.allowedTools = new Set(list);
 }
 
+export function setAllowedToolsets(list: string[]): void {
+  runtimeConfig.allowedToolsets = new Set(list);
+}
+
 export function isToolAllowed(name: string): boolean {
   // CLI allowlist takes precedence when set
   if (runtimeConfig.allowedTools && runtimeConfig.allowedTools.size > 0) {
     return runtimeConfig.allowedTools.has(name);
+  }
+
+  // If toolsets are specified, check mapping from toolset -> tool names
+  if (runtimeConfig.allowedToolsets && runtimeConfig.allowedToolsets.size > 0 && runtimeConfig.toolsetsMap) {
+    for (const ts of runtimeConfig.allowedToolsets) {
+      const members = runtimeConfig.toolsetsMap[ts];
+      if (Array.isArray(members) && members.includes(name)) return true;
+    }
+    // not included in specified toolsets
+    return false;
   }
 
   // Policy file driven behavior

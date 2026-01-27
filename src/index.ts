@@ -51,8 +51,51 @@ async function main(): Promise<void> {
       opts.maxFetchSize = Number(args[++i]) || undefined;
       continue;
     }
+    if (a.startsWith("--toolsets=")) {
+      const val = a.split("=", 2)[1] || "";
+      opts.toolsets = val.split(",").map((s) => s.trim()).filter(Boolean);
+      continue;
+    }
+    if (a === "--toolsets") {
+      const val = args[++i] || "";
+      opts.toolsets = val.split(",").map((s) => s.trim()).filter(Boolean);
+      continue;
+    }
+    if (a === "--dynamic-toolsets") {
+      opts.dynamicToolsets = true;
+      continue;
+    }
+    if (a === "--insiders") {
+      opts.insiders = true;
+      continue;
+    }
+    if (a === "--lockdown") {
+      opts.lockdownMode = true;
+      continue;
+    }
 
     // ignore unknown args for forward compatibility
+  }
+
+  // apply env var fallbacks when CLI options were not provided
+  if (!opts.toolsets) {
+    const envToolsets = process.env.AIKEN_TOOLSETS || process.env.GITHUB_TOOLSETS || process.env.MCP_TOOLSETS;
+    if (envToolsets) opts.toolsets = String(envToolsets).split(",").map((s) => s.trim()).filter(Boolean);
+  }
+
+  if (typeof opts.dynamicToolsets === "undefined") {
+    const v = process.env.AIKEN_DYNAMIC_TOOLSETS || process.env.GITHUB_DYNAMIC_TOOLSETS || process.env.MCP_DYNAMIC_TOOLSETS;
+    if (v) opts.dynamicToolsets = String(v) === "1" || String(v).toLowerCase() === "true";
+  }
+
+  if (typeof opts.insiders === "undefined") {
+    const v = process.env.AIKEN_INSIDERS || process.env.GITHUB_INSIDERS || process.env.MCP_INSIDERS;
+    if (v) opts.insiders = String(v) === "1" || String(v).toLowerCase() === "true";
+  }
+
+  if (typeof opts.lockdownMode === "undefined") {
+    const v = process.env.AIKEN_LOCKDOWN || process.env.GITHUB_LOCKDOWN || process.env.MCP_LOCKDOWN;
+    if (v) opts.lockdownMode = String(v) === "1" || String(v).toLowerCase() === "true";
   }
 
   applyCliOptions(opts);

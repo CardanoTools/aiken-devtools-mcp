@@ -227,5 +227,53 @@
       "safety": "safe",
       "category": "discovery"
     }
-  ]
+  ],
+  "toolsets": {
+    "default": [
+      "project",
+      "knowledge"
+    ],
+    "project": [
+      "aiken_version",
+      "aiken_check",
+      "aiken_build",
+      "aiken_test",
+      "aiken_fmt",
+      "aiken_docs",
+      "aiken_blueprint_apply"
+    ],
+    "blueprint": [
+      "aiken_blueprint_preamble",
+      "aiken_blueprint_list_validators",
+      "aiken_blueprint_get_validator",
+      "aiken_blueprint_hash",
+      "aiken_blueprint_address",
+      "aiken_blueprint_policy",
+      "aiken_blueprint_convert",
+      "aiken_blueprint_export_cardano_cli",
+      "aiken_blueprint_integration_bundle",
+      "aiken_blueprint_integration_bundle_all",
+      "aiken_blueprint_integration_bundle_by_title"
+    ],
+    "knowledge": [
+      "aiken_knowledge_sync",
+      "aiken_knowledge_search",
+      "aiken_knowledge_read_file",
+      "aiken_knowledge_list",
+      "aiken_knowledge_add",
+      "aiken_knowledge_ingest",
+      "aiken_knowledge_bulk_ingest",
+      "aiken_knowledge_proposals_list",
+      "aiken_knowledge_approve",
+      "aiken_knowledge_index"
+    ],
+    "codegen": [
+      "aiken_codegen_lucid_evolution",
+      "aiken_codegen_evolution_sdk"
+    ],
+    "discovery": [
+      "aiken_server_manifest",
+      "aiken_tools_catalog"
+    ]
+  }
 }

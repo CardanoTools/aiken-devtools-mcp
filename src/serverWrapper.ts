@@ -5,15 +5,41 @@ import { auditToolCall } from "./audit/log.js";
 import { runtimeConfig, isToolAllowed } from "./runtimeConfig.js";
 
 export function attachPolicyWrapper(server: McpServer): void {
-  // Attempt to load a local manifest to extract per-tool categories for _meta
+  // Attempt to load a local manifest to extract per-tool categories and toolset info for _meta
   const toolCategoryMap: Record<string, string> = {};
+  const toolIconMap: Record<string, string> = {};
+  const toolInsidersMap: Record<string, boolean> = {};
+  const toolSafetyMap: Record<string, string> = {};
+  const toolToolsetsMap: Record<string, string[]> = {};
+
   try {
     const p = path.join(process.cwd(), "mcp-tools.json");
     const raw = fs.readFileSync(p, "utf8");
-    const parsed = JSON.parse(raw) as { tools?: Array<Record<string, any>> };
+    const parsed = JSON.parse(raw) as { tools?: Array<Record<string, any>>; toolsets?: Record<string, string[]> };
+
+    // tool-level metadata
     for (const t of (parsed.tools ?? [])) {
-      if (t && t.name && t.category) toolCategoryMap[String(t.name)] = String(t.category);
+      if (!t || !t.name) continue;
+      const name = String(t.name);
+      if (t.category) toolCategoryMap[name] = String(t.category);
+      if (t.icon) toolIconMap[name] = String(t.icon);
+      if (t.insiders) toolInsidersMap[name] = !!t.insiders;
+      if (t.safety) toolSafetyMap[name] = String(t.safety);
     }
+
+    // populate toolsets map (toolset -> members) and reverse map (tool -> toolsets)
+    if (parsed.toolsets && typeof parsed.toolsets === 'object') {
+      runtimeConfig.toolsetsMap = parsed.toolsets as Record<string, string[]>;
+      for (const [tsName, members] of Object.entries(parsed.toolsets)) {
+        if (!Array.isArray(members)) continue;
+        for (const m of members) {
+          const mn = String(m);
+          if (!toolToolsetsMap[mn]) toolToolsetsMap[mn] = [];
+          (toolToolsetsMap[mn] as string[]).push(tsName);
+        }
+      }
+    }
+
   } catch {
     // ignore - manifest optional
   }
@@ -22,11 +48,15 @@ export function attachPolicyWrapper(server: McpServer): void {
   const orig = (server as any).registerTool.bind(server);
 
   (server as any).registerTool = function (name: string, config: any, cb: any) {
-    // attach category metadata to the tool registration when available
+    // attach category, icon, insiders, safety, toolset metadata to the tool registration when available
     try {
       config = config || {};
       config._meta = config._meta || {};
       if (!config._meta.category) config._meta.category = toolCategoryMap[name] ?? "uncategorized";
+      if (!config._meta.icon && toolIconMap[name]) config._meta.icon = toolIconMap[name];
+      if (typeof config._meta.insiders === 'undefined') config._meta.insiders = !!toolInsidersMap[name];
+      if (!config._meta.safety && toolSafetyMap[name]) config._meta.safety = toolSafetyMap[name];
+      if (!config._meta.toolsets && toolToolsetsMap[name]) config._meta.toolsets = toolToolsetsMap[name];
     } catch {
       // ignore metadata attach errors
     }
@@ -40,6 +70,18 @@ export function attachPolicyWrapper(server: McpServer): void {
         const err = new Error(`Tool ${name} is disabled by server policy`);
         await auditToolCall(name, args, { ok: false, error: err.message });
         throw err;
+      }
+
+      // lockdown enforcement: prevent network-related tools from running when lockdownMode is enabled
+      try {
+        const safety = (config && config._meta && config._meta.safety) || "";
+        if (runtimeConfig.lockdownMode && safety === "network") {
+          const err = new Error(`Lockdown mode prevents running networked tool ${name}`);
+          await auditToolCall(name, args, { ok: false, error: err.message });
+          throw err;
+        }
+      } catch (e) {
+        // ignore and continue - err will be thrown above if applicable
       }
 
       // readonly enforcement: block obvious commit/destructive ops
@@ -76,6 +118,22 @@ export function attachPolicyWrapper(server: McpServer): void {
       }
     };
 
-    return orig(name, config, wrapped);
+    const registered = orig(name, config, wrapped);
+
+    // If a tool is marked as insiders-only, disable it unless insiders mode is enabled
+    try {
+      if ((config && config._meta && config._meta.insiders === true) && !runtimeConfig.insiders) {
+        if (registered && typeof registered.disable === "function") registered.disable();
+      }
+
+      // If running in lockdown mode, also disable tools whose safety is 'network' to avoid exposing external content
+      if (runtimeConfig.lockdownMode && (config && config._meta && config._meta.safety === "network")) {
+        if (registered && typeof registered.disable === "function") registered.disable();
+      }
+    } catch {
+      // ignore
+    }
+
+    return registered;
   };
 }
