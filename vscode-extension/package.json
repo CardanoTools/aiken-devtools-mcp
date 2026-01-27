@@ -1,0 +1,47 @@
+{
+  "name": "aiken-devtools-vscode",
+  "displayName": "Aiken Devtools (MCP)",
+  "description": "Launch the Aiken Devtools MCP server from VS Code (stdio transport) and manage basic permissions.",
+  "version": "0.0.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "activationEvents": [
+    "onCommand:aiken-devtools.start"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aiken-devtools.start",
+        "title": "Aiken Devtools: Start"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Aiken Devtools",
+      "properties": {
+        "aikenDevtools.allowTools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of tool names to allow (passed via --allow-tools to the server)"
+        },
+        "aikenDevtools.disableReadonly": {
+          "type": "boolean",
+          "description": "Disable readonly mode when launching the server (not recommended)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "watch": "tsc -w -p ./"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types-node": "^25.0.10",
+    "@types/vscode": "^1.80.0"
+  }
+}

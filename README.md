@@ -51,6 +51,8 @@ New knowledge tools:
 - `aiken_knowledge_list`: list known knowledge sources. Returns a compact list by default (id, category, folderName, subPath, remoteHost). Use `include: "full"` to return full specs. Supports filtering by `ids`, `category`, or `query`.
 - `aiken_knowledge_add`: add a new knowledge source programmatically. Input: `{ remoteUrl, category?, subPath?, description?, defaultRef?, folderName?, commit?, runSync? }`. This will write into `src/knowledge/<category>/customAdded.ts`, update the category index, and (optionally) commit the change for you.
 
+Tool discovery & categories
+- Run `aiken_tools_catalog` to get a categorized list of tools (the server also exposes `mcp-tools.json` via a resource). Hosts can use this to present tools grouped by feature area (project, blueprint, knowledge, codegen, discovery).
 - `aiken_knowledge_read_file`: reads a file from the workspace (including cached knowledge sources) by line range.
 - `aiken_codegen_lucid_evolution`: generates a TypeScript snippet for `@lucid-evolution/lucid` from a validator (via `aiken blueprint convert --to cardano-cli`).
 - `aiken_codegen_evolution_sdk`: (preferred) generates a TypeScript snippet using `@evolution-sdk/evolution` packages from `IntersectMBO/evolution-sdk`.
@@ -150,3 +152,6 @@ We've added a small importer script that fetches the curated list from the Aweso
 - After running, update the repository's cache with: `npx mcp run aiken_knowledge_sync` (or use the MCP tool UI) to clone or update the newly added sources.
 
 If you want, I can run the importer now and add more fine-grained sources or tune category mapping.
+
+VS Code integration
+- A minimal VS Code extension skeleton is included under `vscode-extension/` that can spawn `npx aiken-devtools-mcp` and pass `--allow-tools` based on workspace settings. This is a starting point for implementing a consent UI and lifecycle management inside VS Code.

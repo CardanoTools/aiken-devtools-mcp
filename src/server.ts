@@ -32,6 +32,7 @@ import { registerAikenKnowledgeProposalsListTool } from "./tools/aikenKnowledgeP
 import { registerAikenKnowledgeApproveTool } from "./tools/aikenKnowledgeApprove";
 import { registerAikenKnowledgeIndexTool } from "./tools/aikenKnowledgeIndex";
 import { registerAikenServerManifestTool } from "./tools/aikenServerManifest";
+import { registerAikenToolsCatalogTool } from "./tools/aikenToolsCatalog";
 import { registerAikenTestTool } from "./tools/aikenTest";
 import { registerAikenVersionTool } from "./tools/aikenVersion";
 
@@ -103,6 +104,7 @@ export function createAikenDevtoolsServer(): McpServer {
   registerAikenKnowledgeIndexTool(server);
 
   registerAikenServerManifestTool(server);
+  registerAikenToolsCatalogTool(server);
   registerAikenCodegenLucidEvolutionTool(server);
   registerAikenCodegenEvolutionSdkTool(server);
 

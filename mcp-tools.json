@@ -4,64 +4,228 @@
   "version": "1.0.0",
   "tools": [
     {
-      "name": "aiken_knowledge_list",
-      "title": "Aiken: Knowledge List",
-      "description": "List known knowledge sources",
-      "safety": "safe"
+      "name": "aiken_version",
+      "title": "Aiken: version",
+      "description": "Returns the installed Aiken CLI version.",
+      "safety": "safe",
+      "category": "project"
     },
     {
-      "name": "aiken_knowledge_read_file",
-      "title": "Aiken: Knowledge Read File",
-      "description": "Read file content from a synced repo",
-      "safety": "safe"
+      "name": "aiken_check",
+      "title": "Aiken: check",
+      "description": "Runs `aiken check` to typecheck and validate the project.",
+      "safety": "safe",
+      "category": "project"
     },
     {
-      "name": "aiken_knowledge_search",
-      "title": "Aiken: Knowledge Search",
-      "description": "Search content across sources",
-      "safety": "safe"
+      "name": "aiken_build",
+      "title": "Aiken: build",
+      "description": "Runs `aiken build` to compile the project and produce artifacts.",
+      "safety": "safe",
+      "category": "project"
+    },
+    {
+      "name": "aiken_test",
+      "title": "Aiken: test",
+      "description": "Runs `aiken test` to execute the project's test suite.",
+      "safety": "safe",
+      "category": "project"
+    },
+    {
+      "name": "aiken_fmt",
+      "title": "Aiken: fmt",
+      "description": "Runs `aiken fmt` to format Aiken sources.",
+      "safety": "destructive",
+      "category": "project"
+    },
+    {
+      "name": "aiken_docs",
+      "title": "Aiken: docs",
+      "description": "Runs `aiken docs` (generate documentation).",
+      "safety": "safe",
+      "category": "project"
+    },
+    {
+      "name": "aiken_blueprint_preamble",
+      "title": "Aiken: blueprint preamble",
+      "description": "Read blueprint JSON and return preamble + counts.",
+      "safety": "safe",
+      "category": "blueprint"
+    },
+    {
+      "name": "aiken_blueprint_list_validators",
+      "title": "Aiken: blueprint list validators",
+      "description": "List validators from a blueprint with basic metadata.",
+      "safety": "safe",
+      "category": "blueprint"
+    },
+    {
+      "name": "aiken_blueprint_get_validator",
+      "title": "Aiken: get validator",
+      "description": "Return a single validator entry from the blueprint.",
+      "safety": "safe",
+      "category": "blueprint"
+    },
+    {
+      "name": "aiken_blueprint_hash",
+      "title": "Aiken: blueprint hash",
+      "description": "Compute validator payment credential hash.",
+      "safety": "safe",
+      "category": "blueprint"
+    },
+    {
+      "name": "aiken_blueprint_address",
+      "title": "Aiken: blueprint address",
+      "description": "Compute a spending validator address (bech32).",
+      "safety": "safe",
+      "category": "blueprint"
+    },
+    {
+      "name": "aiken_blueprint_policy",
+      "title": "Aiken: blueprint policy",
+      "description": "Compute a minting policy ID.",
+      "safety": "safe",
+      "category": "blueprint"
+    },
+    {
+      "name": "aiken_blueprint_convert",
+      "title": "Aiken: blueprint convert",
+      "description": "Convert blueprint validator to cardano-cli JSON.",
+      "safety": "safe",
+      "category": "blueprint"
+    },
+    {
+      "name": "aiken_blueprint_export_cardano_cli",
+      "title": "Aiken: blueprint export cardano-cli",
+      "description": "Export cardano-cli JSON for validators.",
+      "safety": "safe",
+      "category": "blueprint"
+    },
+    {
+      "name": "aiken_blueprint_integration_bundle",
+      "title": "Aiken: blueprint integration bundle",
+      "description": "Compute hash/address/policy and optional code snippets for a validator.",
+      "safety": "safe",
+      "category": "blueprint"
+    },
+    {
+      "name": "aiken_blueprint_integration_bundle_all",
+      "title": "Aiken: blueprint integration bundle (all)",
+      "description": "Compute integration bundles for every validator in the blueprint.",
+      "safety": "safe",
+      "category": "blueprint"
+    },
+    {
+      "name": "aiken_blueprint_integration_bundle_by_title",
+      "title": "Aiken: blueprint integration bundle (by title)",
+      "description": "Compute integration bundle for a validator selected by title.",
+      "safety": "safe",
+      "category": "blueprint"
+    },
+    {
+      "name": "aiken_blueprint_apply",
+      "title": "Aiken: blueprint apply",
+      "description": "Apply a parameter to a parameterized validator (may write output).",
+      "safety": "destructive",
+      "category": "blueprint"
     },
     {
       "name": "aiken_knowledge_sync",
       "title": "Aiken: Knowledge Sync",
-      "description": "Clone/update knowledge repositories",
-      "safety": "network"
+      "description": "Clone/update knowledge repositories.",
+      "safety": "network",
+      "category": "knowledge"
+    },
+    {
+      "name": "aiken_knowledge_search",
+      "title": "Aiken: Knowledge Search",
+      "description": "Search content across sources.",
+      "safety": "safe",
+      "category": "knowledge"
+    },
+    {
+      "name": "aiken_knowledge_read_file",
+      "title": "Aiken: Knowledge Read File",
+      "description": "Read file content from a synced repo.",
+      "safety": "safe",
+      "category": "knowledge"
+    },
+    {
+      "name": "aiken_knowledge_list",
+      "title": "Aiken: Knowledge List",
+      "description": "List known knowledge sources.",
+      "safety": "safe",
+      "category": "knowledge"
     },
     {
       "name": "aiken_knowledge_add",
       "title": "Aiken: Knowledge Add",
-      "description": "Add a new KnowledgeSourceSpec to customAdded.ts",
-      "safety": "destructive"
+      "description": "Add a new KnowledgeSourceSpec to customAdded.ts.",
+      "safety": "destructive",
+      "category": "knowledge"
     },
     {
       "name": "aiken_knowledge_ingest",
       "title": "Aiken: Knowledge Ingest",
-      "description": "Propose a web or repo source by fetching and converting to markdown",
-      "safety": "network"
-    },
-    {
-      "name": "aiken_knowledge_proposals_list",
-      "title": "Aiken: Knowledge Proposals List",
-      "description": "List pending proposals",
-      "safety": "safe"
-    },
-    {
-      "name": "aiken_knowledge_approve",
-      "title": "Aiken: Knowledge Approve",
-      "description": "Approve a proposal and add it to customAdded.ts",
-      "safety": "destructive"
-    },
-    {
-      "name": "aiken_knowledge_index",
-      "title": "Aiken: Knowledge Index",
-      "description": "Index chunks to vector store",
-      "safety": "network"
+      "description": "Propose a web or repo source by fetching and converting to markdown.",
+      "safety": "network",
+      "category": "knowledge"
     },
     {
       "name": "aiken_knowledge_bulk_ingest",
       "title": "Aiken: Bulk Ingest",
-      "description": "Bulk ingest many URLs or git repos",
-      "safety": "destructive"
+      "description": "Bulk ingest many URLs or git repos.",
+      "safety": "destructive",
+      "category": "knowledge"
+    },
+    {
+      "name": "aiken_knowledge_proposals_list",
+      "title": "Aiken: Knowledge Proposals List",
+      "description": "List pending proposals.",
+      "safety": "safe",
+      "category": "knowledge"
+    },
+    {
+      "name": "aiken_knowledge_approve",
+      "title": "Aiken: Knowledge Approve",
+      "description": "Approve a proposal and add it to customAdded.ts.",
+      "safety": "destructive",
+      "category": "knowledge"
+    },
+    {
+      "name": "aiken_knowledge_index",
+      "title": "Aiken: Knowledge Index",
+      "description": "Index chunks to vector store.",
+      "safety": "network",
+      "category": "knowledge"
+    },
+    {
+      "name": "aiken_codegen_lucid_evolution",
+      "title": "Aiken: codegen (@lucid-evolution/lucid)",
+      "description": "Generate a TypeScript snippet using Lucid Evolution from a validator.",
+      "safety": "safe",
+      "category": "codegen"
+    },
+    {
+      "name": "aiken_codegen_evolution_sdk",
+      "title": "Aiken: codegen (Evolution SDK)",
+      "description": "Generate a TypeScript snippet using the Evolution SDK.",
+      "safety": "safe",
+      "category": "codegen"
+    },
+    {
+      "name": "aiken_server_manifest",
+      "title": "Aiken: server manifest",
+      "description": "Return the local MCP tool manifest (mcp-tools.json)",
+      "safety": "safe",
+      "category": "discovery"
+    },
+    {
+      "name": "aiken_tools_catalog",
+      "title": "Aiken: tools catalog",
+      "description": "Return a categorized listing of available tools for host discovery.",
+      "safety": "safe",
+      "category": "discovery"
     }
   ]
 }

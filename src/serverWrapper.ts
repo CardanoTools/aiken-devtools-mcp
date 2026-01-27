@@ -1,12 +1,36 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import fs from "node:fs";
+import path from "node:path";
 import { auditToolCall } from "./audit/log.js";
 import { runtimeConfig, isToolAllowed } from "./runtimeConfig.js";
 
 export function attachPolicyWrapper(server: McpServer): void {
+  // Attempt to load a local manifest to extract per-tool categories for _meta
+  const toolCategoryMap: Record<string, string> = {};
+  try {
+    const p = path.join(process.cwd(), "mcp-tools.json");
+    const raw = fs.readFileSync(p, "utf8");
+    const parsed = JSON.parse(raw) as { tools?: Array<Record<string, any>> };
+    for (const t of (parsed.tools ?? [])) {
+      if (t && t.name && t.category) toolCategoryMap[String(t.name)] = String(t.category);
+    }
+  } catch {
+    // ignore - manifest optional
+  }
+
   // patch registerTool to wrap handlers with policy checks & auditing
   const orig = (server as any).registerTool.bind(server);
 
   (server as any).registerTool = function (name: string, config: any, cb: any) {
+    // attach category metadata to the tool registration when available
+    try {
+      config = config || {};
+      config._meta = config._meta || {};
+      if (!config._meta.category) config._meta.category = toolCategoryMap[name] ?? "uncategorized";
+    } catch {
+      // ignore metadata attach errors
+    }
+
     const wrapped = async (args: any, extra: any) => {
       const start = Date.now();
 

@@ -48,3 +48,7 @@ Bulk ingest
   - `autoIndex`: compute embeddings for chunks and write to local vector store
 
 If you'd like, I can next integrate the MCP `fetch` server for more robust web ingestion or add an automatic summarization step (LLM-based) to produce short abstracts for each proposal.
+
+Tool discovery & categories
+- The server provides a categorized manifest (`mcp-tools.json`) for host discovery. Use the `aiken_tools_catalog` tool to retrieve a `byCategory` map of available tools, which is convenient for UIs (e.g., VS Code) to show grouped tools.
+
