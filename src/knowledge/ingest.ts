@@ -322,7 +322,7 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
   // Optionally compute embeddings and store in local vector store
   if (opts.autoIndex) {
     try {
-      const { getEmbedding } = await import("./embeddings.js");
+      const { getEmbeddingWithProvider } = await import("./embeddings.js");
       const { upsertVectors } = await import("./vectorStoreFile.js");
       const collection = opts.indexCollection ?? spec.id;
       const records = [] as Array<{ id: string; vector: number[]; metadata: Record<string, any> }>;
@@ -330,9 +330,13 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i] ?? "";
         if (!chunk) continue;
-        const emb = await getEmbedding(chunk);
-        if (!emb) continue; // skip if embeddings not available
-        records.push({ id: `${spec.id}#${i}`, vector: emb, metadata: { source: url, specId: spec.id, index: i, text: chunk.slice(0, 256) } });
+        const embRes = await getEmbeddingWithProvider(chunk, { allowPseudo: true });
+        if (!embRes || !embRes.vector) continue; // skip if embeddings not available
+        records.push({
+          id: `${spec.id}#${i}`,
+          vector: embRes.vector,
+          metadata: { source: url, specId: spec.id, index: i, text: chunk.slice(0, 256), provider: embRes.provider, pseudo: !!embRes.pseudo }
+        });
       }
 
       if (records.length) {

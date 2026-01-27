@@ -3,7 +3,7 @@
   const { resolveRepoBaseDirPath, resolveSourceDirPath, getCacheBaseDir } = require('../dist/knowledge/utils.js');
   const { runGit } = require('../dist/git/runGit.js');
   const { chunkText } = require('../dist/knowledge/ingest.js');
-  const { getEmbedding } = require('../dist/knowledge/embeddings.js');
+  const { getEmbeddingWithProvider } = require('../dist/knowledge/embeddings.js');
   const { upsertVectors } = require('../dist/knowledge/vectorStoreFile.js');
   const fs = require('fs').promises;
   const path = require('path');
@@ -79,9 +79,9 @@
         for (let i = 0; i < chunks.length; i++) {
           const c = chunks[i] || '';
           if (!c) continue;
-          const emb = await getEmbedding(c);
-          if (!emb) continue; // skip if embedding not available
-          records.push({ id: `${sourceId}:${path.relative(root, full)}#${i}`, vector: emb, metadata: { sourceId, file: path.relative(root, full), index: i, text: c.slice(0, 256) } });
+          const embRes = await getEmbeddingWithProvider(c, { allowPseudo: true });
+          if (!embRes || !embRes.vector) continue;
+          records.push({ id: `${sourceId}:${path.relative(root, full)}#${i}`, vector: embRes.vector, metadata: { sourceId, file: path.relative(root, full), index: i, text: c.slice(0, 256), provider: embRes.provider, pseudo: !!embRes.pseudo } });
           totalChunks++;
         }
       }
@@ -89,7 +89,7 @@
   }
 
   if (!records.length) {
-    console.error('No vectors generated. Is OPENAI_API_KEY set?');
+    console.error('No vectors generated. Are embedding providers configured?');
     process.exit(2);
   }
 

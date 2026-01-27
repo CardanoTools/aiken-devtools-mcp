@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { getProposalById, listProposals } from "../knowledge/proposals.js";
-import { getEmbedding } from "../knowledge/embeddings.js";
+import { getEmbeddingWithProvider } from "../knowledge/embeddings.js";
 import { upsertVectors } from "../knowledge/vectorStoreFile.js";
 import { ALL_KNOWLEDGE_SOURCES } from "../knowledge/index.js";
 import { resolveSourceDirPath } from "../knowledge/utils.js";
@@ -32,7 +32,7 @@ export function registerAikenKnowledgeIndexTool(server: McpServer): void {
     "aiken_knowledge_index",
     {
       title: "Aiken: knowledge index",
-      description: "Index a proposal or a synced knowledge source into the local vector store (file-based). Requires OPENAI_API_KEY to generate embeddings.",
+      description: "Index a proposal or a synced knowledge source into the local vector store (file-based). Uses configured embedding providers (OpenAI, Anthropic/Claude, Cohere, GitHub Copilot, or fallback pseudo embeddings). Configure providers via environment variables (EMBEDDING_PROVIDERS and provider-specific keys).",
       inputSchema,
       outputSchema,
       annotations: { readOnlyHint: false, idempotentHint: false, destructiveHint: true, openWorldHint: true }
@@ -60,9 +60,9 @@ export function registerAikenKnowledgeIndexTool(server: McpServer): void {
           for (let i = 0; i < chunks.length; i++) {
             const c = chunks[i] ?? "";
             if (!c) continue;
-            const emb = await getEmbedding(c);
-            if (!emb) continue;
-            records.push({ id: `${proposalId}#${i}`, vector: emb, metadata: { proposalId, index: i, text: c.slice(0, 256) } });
+            const embRes = await getEmbeddingWithProvider(c, { allowPseudo: true });
+            if (!embRes || !embRes.vector) continue;
+            records.push({ id: `${proposalId}#${i}`, vector: embRes.vector, metadata: { proposalId, index: i, text: c.slice(0, 256), provider: embRes.provider, pseudo: !!embRes.pseudo } });
           }
         } catch (err) {
           return { isError: true, content: [{ type: "text", text: `Failed to read proposal: ${String(err)}` }] };
@@ -103,9 +103,9 @@ export function registerAikenKnowledgeIndexTool(server: McpServer): void {
                 for (let i = 0; i < chunks.length; i++) {
                   const c = chunks[i] ?? '';
                   if (!c) continue;
-                  const emb = await getEmbedding(c);
-                  if (!emb) continue;
-                  records.push({ id: `${sourceId}:${path.relative(root, full)}#${i}`, vector: emb, metadata: { sourceId, file: path.relative(root, full), index: i, text: c.slice(0, 256) } });
+                  const embRes = await getEmbeddingWithProvider(c, { allowPseudo: true });
+                  if (!embRes || !embRes.vector) continue;
+                  records.push({ id: `${sourceId}:${path.relative(root, full)}#${i}`, vector: embRes.vector, metadata: { sourceId, file: path.relative(root, full), index: i, text: c.slice(0, 256), provider: embRes.provider, pseudo: !!embRes.pseudo } });
                 }
               }
             }
@@ -115,7 +115,7 @@ export function registerAikenKnowledgeIndexTool(server: McpServer): void {
         }
       }
 
-      if (!records.length) return { isError: true, content: [{ type: "text", text: "No chunks were prepared for indexing or embeddings are unavailable (OPENAI_API_KEY?)." }] };
+      if (!records.length) return { isError: true, content: [{ type: "text", text: "No chunks were prepared for indexing or embeddings are unavailable (check EMBEDDING_PROVIDERS and provider credentials)." }] };
 
       try {
         const count = await upsertVectors(coll, records as any);

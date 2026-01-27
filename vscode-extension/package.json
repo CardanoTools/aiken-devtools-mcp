@@ -6,9 +6,7 @@
   "engines": {
     "vscode": "^1.80.0"
   },
-  "activationEvents": [
-    "onCommand:aiken-devtools.start"
-  ],
+  "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -41,7 +39,6 @@
   },
   "devDependencies": {
     "typescript": "^5.3.3",
-    "@types-node": "^25.0.10",
     "@types/vscode": "^1.80.0"
   }
 }

@@ -1,6 +1,6 @@
 (async () => {
   const { ingestUrl } = require('../dist/knowledge/ingest.js');
-  const { getEmbedding } = require('../dist/knowledge/embeddings.js');
+  const { getEmbeddingWithProvider } = require('../dist/knowledge/embeddings.js');
   const { upsertVectors } = require('../dist/knowledge/vectorStoreFile.js');
   const { chunkText } = require('../dist/knowledge/ingest.js');
   const fs = require('fs').promises;
@@ -33,32 +33,12 @@
 
     const records = [];
 
-    function pseudoEmbedding(str, dim = 256) {
-      const crypto = require('crypto');
-      const out = [];
-      let counter = 0;
-      while (out.length < dim) {
-        const h = crypto.createHash('sha256').update(str + '|' + counter).digest();
-        for (let i = 0; i < h.length && out.length < dim; i++) {
-          // map byte 0..255 to -1..1
-          out.push(h[i] / 255 * 2 - 1);
-        }
-        counter++;
-      }
-      return out;
-    }
-
-    let usedFallback = false;
     for (let i = 0; i < chunks.length; i++) {
       const c = chunks[i] || '';
       if (!c) continue;
-      let emb = await getEmbedding(c);
-      if (!emb) {
-        // fallback to deterministic pseudo-embedding so indexing can proceed without OpenAI key
-        emb = pseudoEmbedding(c, 256);
-        usedFallback = true;
-      }
-      records.push({ id: `${res.id}#${i}`, vector: emb, metadata: { source: url, proposalId: res.id, index: i, text: c.slice(0, 256), pseudo: usedFallback } });
+      const embRes = await getEmbeddingWithProvider(c, { allowPseudo: true });
+      if (!embRes || !embRes.vector) continue;
+      records.push({ id: `${res.id}#${i}`, vector: embRes.vector, metadata: { source: url, proposalId: res.id, index: i, text: c.slice(0, 256), provider: embRes.provider, pseudo: !!embRes.pseudo } });
     }
 
     if (!records.length) {

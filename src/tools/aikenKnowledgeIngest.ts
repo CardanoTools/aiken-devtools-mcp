@@ -49,8 +49,8 @@ const inputSchema = z
     runSync: z.boolean().optional().describe("When autoAdd is used, attempt to run a sync after adding (best-effort, may be a no-op)."),
     fetchOptions: z.object({ maxChars: z.number().int().positive().optional(), chunkSize: z.number().int().positive().optional() }).optional(),
     renderJs: z.boolean().optional().describe("If true, render JS with Playwright before extracting content."),
-    summarize: z.boolean().optional().describe("If true, generate a short summary using configured summarizer (OPENAI_API_KEY or fallback)."),
-    autoIndex: z.boolean().optional().describe("If true, compute embeddings for chunks and store in local vector store (OPENAI_API_KEY required)."),
+    summarize: z.boolean().optional().describe("If true, generate a short summary using configured summarizer (OpenAI or other provider configured via SUMMARIZER_PROVIDER and provider-specific env vars); falls back to extractive summarization if not available."),
+    autoIndex: z.boolean().optional().describe("If true, compute embeddings for chunks and store in local vector store using configured embedding providers (set EMBEDDING_PROVIDERS and provider credentials via env vars)."),
     indexCollection: z.string().optional().describe("Optional collection name for the vector store (defaults to spec.id).")
   })
   .strict();
