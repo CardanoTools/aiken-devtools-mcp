@@ -1,48 +1,45 @@
-# Copilot Instructions for aiken-devtools-mcp
+# Copilot instructions — aiken-devtools-mcp
 
-Welcome, AI coding agents! This guide distills the essential knowledge and patterns for working productively in this codebase.
+Short, actionable notes for AI coding agents working in this repository.
 
-## Architecture Overview
-- **Purpose:** Provides Model Context Protocol (MCP) tools for developing, integrating, and auditing Aiken smart contracts.
-- **Key Components:**
-  - `src/`: Core server, tool implementations, and knowledge integration logic.
-  - `scripts/`: Node.js scripts for tool search, ingestion, and automation.
-  - `mcp-tools.json` / `mcp-policy.json`: Tool manifest and admin policy for tool access and restrictions.
-  - `var/vectors/`: Vector store for knowledge search.
-  - `vscode-extension/`: VS Code extension for launching the MCP server and tool consent UI.
+Quick start
+- Install deps: `npm install`
+- Build: `npm run build`
+- Run MCP server (stdio): `npm start`
+- Common run flags: `--no-readonly`, `--allow-tools aiken_knowledge_add`, `--toolsets project,knowledge`, `--dynamic-toolsets`, `--insiders`, `--lockdown`
 
-## Developer Workflows
-- **Install dependencies:** `npm install`
-- **Build:** `npm run build`
-- **Run server:** `npm start` (stdio MCP server)
-- **Run with tool allowlist:** `npx aiken-devtools-mcp --allow-tools <tool>`
-- **Test:** (No explicit test script; see `scripts/` for integration tests)
-- **Import Awesome Aiken:** `npm run import:awesome` then `npx mcp run aiken_knowledge_sync`
+Architecture snapshot (what to read first)
+- `src/index.ts` — CLI entry: parses flags, sets runtimeConfig and starts transport.
+- `src/server.ts` — composes the MCP server, registers prompts/resources and calls all `register*` tool functions.
+- `src/serverWrapper.ts` — policy & audit wrapper: enforces readonly/lockdown/toolset rules and wires `mcp-tools.json` metadata.
+- `src/tools/**` — tool implementations (each exports a `register...` function the server imports). See `src/tools/project/aikenBuild.ts` for a canonical example (zod schemas + annotations).
+- `mcp-tools.json` — manifest + toolsets map used by the wrapper to enable/disable tools.
 
-## Tooling & Patterns
-- **MCP Tools:** Defined in `mcp-tools.json`, implemented in `src/`. Exposed via CLI and MCP server.
-- **Knowledge Sync/Search:** Use `aiken_knowledge_sync` to fetch docs/libraries, and `aiken_knowledge_search` to query them. Cached in `.aiken-devtools-cache/`.
-- **Blueprint Integration:** Use `aiken_blueprint_*` tools to inspect, hash, and export validator blueprints. See integration bundle tools for multi-step flows.
-- **Codegen:** Prefer `aiken_codegen_evolution_sdk` for generating TypeScript snippets for Evolution SDK integration.
-- **Dynamic Toolsets:** Enable/disable toolsets at runtime with `--toolsets` or `AIKEN_TOOLSETS` env var. Use `--dynamic-toolsets` for runtime toggling.
-- **Audit & Policy:** All tool calls are logged to `audit.log` (sensitive fields redacted). Use `mcp-policy.json` to restrict tool access.
+How to add or change an MCP tool (practical steps)
+1. Add a `tools` entry to `mcp-tools.json` (set `name`, `safety`, `category` and optionally `insiders`).
+2. Implement a registration function at `src/tools/<category>/aikenYourTool.ts` following existing patterns: export `registerAikenYourTool(server: McpServer)`, use `server.registerTool(name, { inputSchema, outputSchema, annotations }, handler)` and prefer `zod` schemas.
+3. Import and call your `register...` from `src/server.ts` so it appears in the runtime server.
+4. Update `toolsets` in `mcp-tools.json` if the tool belongs to a named toolset and add integration tests under `scripts/`.
 
-## Project Conventions
-- **Readonly by default:** Server starts in readonly mode; destructive tools require explicit allowlist.
-- **Generated files:** Some files in `src/knowledge/` are auto-generated (e.g., `awesomeAiken.ts`).
-- **Minimal VS Code extension:** See `vscode-extension/` for a starter extension that launches the MCP server.
+Runtime & policy notes (important for automation)
+- Server is readonly by default; destructive or commit-like actions are blocked unless `--no-readonly` or `--allow-tools` is used.
+- `attachPolicyWrapper` (in `src/serverWrapper.ts`) enforces `mcp-policy.json`, `runtimeConfig` flags, `insiders` and `lockdown` behaviors and records calls via `src/audit/log.ts`.
+- Tools have `safety` tags in `mcp-tools.json` (e.g., `network`, `destructive`, `safe`) — the wrapper consults these.
 
-## Examples
-- See `README.md` for detailed tool input/output examples and workflow guidance.
-- Use `scripts/tool-search.js` or the `aiken_tool_search` MCP tool to discover available tools.
+Knowledge & ingestion
+- `aiken_knowledge_sync`, `aiken_knowledge_ingest` and `aiken_knowledge_index` operate on a local cache/vector store under `var/vectors/` and can download large repos — run them deliberately and preferably in non-lockdown/dev-machine.
+- Use `npm run import:awesome` to generate `src/knowledge/awesome/awesomeAiken.ts` then run `npx mcp run aiken_knowledge_sync` to clone/cache sources.
 
-## Key Files & Directories
-- `src/` — Core logic and tool implementations
-- `scripts/` — Automation and integration scripts
-- `mcp-tools.json` — Tool manifest
-- `mcp-policy.json` — Tool access policy
-- `var/vectors/` — Vector store for knowledge search
-- `vscode-extension/` — VS Code integration
+Testing and developer tasks
+- Integration/test scripts live in `scripts/` (many are plain Node scripts, e.g. `scripts/test_tool_search.js`). There is no single `npm test` wrapper — inspect/execute the script you need.
+- VS Code extension packaging task: see the workspace task "Package VS Code Extension" (runs `vscode-extension/npm install && npm run package`).
 
----
-For more, see the project [README.md](../README.md) and in-code comments. When in doubt, prefer the established tool and workflow patterns described above.
+Files to inspect for common patterns
+- `src/server.ts`, `src/serverWrapper.ts`, `src/index.ts`, `mcp-tools.json`, `mcp-policy.json`, `src/tools/**`, `scripts/*`, `README.md`.
+
+Notes & conventions
+- Prefer adding zod input/output schemas and tool `annotations` (readOnlyHint/idempotentHint/destructiveHint) to make tools self-describing.
+- Keep changes small and respect the manifest: update `mcp-tools.json` alongside any new tool registration to keep metadata consistent for the wrapper.
+- Audit logs are written to `audit.log` (sensitive fields are redacted).
+
+If any section is unclear or you want examples expanded (e.g., a sample `register` implementation or a checklist for adding tests), tell me which area to expand and I will update this file.
