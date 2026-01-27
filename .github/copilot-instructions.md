@@ -42,7 +42,37 @@ Notes & conventions
 - Keep changes small and respect the manifest: update `mcp-tools.json` alongside any new tool registration to keep metadata consistent for the wrapper.
 - Audit logs are written to `audit.log` (sensitive fields are redacted).
 
-If any section is unclear or you want examples expanded (e.g., a sample `register` implementation or a checklist for adding tests), tell me which area to expand and I will update this file.
+Contributor checklist — tests, manifest, PR
+
+1) Add or update `mcp-tools.json`:
+	- Add a `tools` entry with `name`, `title`, `description`, `safety`, `category` (and `insiders` if needed).
+	- Add the tool name to the appropriate `toolsets` group (e.g., `project`, `knowledge`).
+
+2) Implement the tool:
+	- Create `src/tools/<category>/aikenYourTool.ts` exporting `registerAikenYourTool(server: McpServer)`.
+	- Use `zod` for `inputSchema` / `outputSchema` and include `annotations` (readOnlyHint/idempotentHint/destructiveHint).
+
+3) Register the tool:
+	- Import and call your `registerAikenYourTool(server)` in `src/server.ts`.
+
+4) Build & smoke test:
+	- `npm run build`
+	- `npm start` (or `node dist/index.cjs`) to verify startup logs (`aiken-devtools-mcp: starting transport=...`).
+	- Quick manifest check: `node scripts/test-example-tool.cjs` or `node scripts/tool-search.js <query>`.
+
+5) Add tests (recommended):
+	- Integration scripts live under `scripts/` (plain node scripts are common here). For unit-style tests use `vitest` and place files under `test/` or `src/**` following existing conventions.
+	- Run test suite: `npm test` (note: this repo currently expects vitest; some projects have no tests yet).
+
+6) Commit & open PR:
+	- Create a branch: `git checkout -b chore/your-thing`
+	- Commit and push: `git add -A && git commit -m "chore: ..." && git push -u origin chore/your-thing`
+	- Create a PR with the GitHub CLI: `gh pr create --fill --base main --head chore/your-thing --title "chore: ..." --body "Summary"`.
+	- If `gh` is unavailable, use the auto-PR URL the remote prints after pushing: `https://github.com/<owner>/<repo>/pull/new/<branch>`.
+
+7) Update the manifest & docs in the same PR so `attachPolicyWrapper` picks up tool metadata automatically.
+
+If any section is unclear or you want a worked example (register + test + PR automation), tell me which area to expand and I will update this file.
 
 Example — register a minimal MCP tool
 

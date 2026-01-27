@@ -28,7 +28,7 @@
     "clean": "rm -rf dist",
     "import:awesome": "node scripts/import-awesome-aiken.js",
     "tool-search": "node scripts/tool-search.js",
-    "test:example": "node scripts/test-example-tool.js"
+    "test:example": "node scripts/test-example-tool.cjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.3",
