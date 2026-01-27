@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "aiken-devtools-mcp": {
+      "command": "node",
+      "args": [
+        "dist/index.js"
+      ],
+      "env": {}
+    }
+  }
+}
