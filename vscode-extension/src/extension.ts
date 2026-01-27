@@ -86,7 +86,7 @@ export function activate(context: vscode.ExtensionContext) {
     return { flags, projectRoot };
   }
 
-  async function startServer() {
+  const startServer = async () => {
     if (currentChild) {
       const should = await vscode.window.showWarningMessage('Aiken Devtools MCP is already running. Restart?', 'Restart', 'Cancel');
       if (should !== 'Restart') return;
@@ -95,6 +95,36 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     const { flags, projectRoot } = await gatherFlagsAndProjectRoot();
+
+    // Check for consent if destructive tools are allowed
+    const config = vscode.workspace.getConfiguration('aikenDevtools');
+    const allow = config.get<string[]>('allowTools') || [];
+    const requireConsent = config.get<boolean>('requireConsent') ?? false;
+    if (requireConsent && allow.length > 0) {
+      const toolsPath = projectRoot ? path.join(projectRoot, 'mcp-tools.json') : path.join(process.cwd(), 'mcp-tools.json');
+      if (fs.existsSync(toolsPath)) {
+        try {
+          const content = fs.readFileSync(toolsPath, 'utf8');
+          const manifest = JSON.parse(content);
+          const tools = manifest.tools || [];
+          const destructiveAllowed = allow.some(toolName => {
+            const tool = tools.find((t: any) => t.name === toolName);
+            return tool && tool.destructive;
+          });
+          if (destructiveAllowed) {
+            const consent = await vscode.window.showWarningMessage(
+              'You are allowing destructive tools. These can modify files or perform irreversible actions. Do you consent?',
+              'Yes, I consent', 'Cancel'
+            );
+            if (consent !== 'Yes, I consent') {
+              return;
+            }
+          }
+        } catch (err) {
+          // ignore, proceed
+        }
+      }
+    }
 
     let child: import('child_process').ChildProcess;
     if (projectRoot && fs.existsSync(path.join(projectRoot, 'dist', 'index.js'))) {
@@ -138,7 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.showInformationMessage('Aiken Devtools MCP started (check Output panel).');
   }
 
-  async function stopServer(timeout = 5000) {
+  const stopServer = async (timeout = 5000) => {
     if (!currentChild) {
       vscode.window.showInformationMessage('Aiken Devtools MCP is not running.');
       return true;
@@ -186,32 +216,77 @@ export function activate(context: vscode.ExtensionContext) {
     });
   }
 
-  async function restartServer() {
+  const showTools = async () => {
+    const { projectRoot } = await gatherFlagsAndProjectRoot();
+    const toolsPath = projectRoot ? path.join(projectRoot, 'mcp-tools.json') : path.join(process.cwd(), 'mcp-tools.json');
+    if (!fs.existsSync(toolsPath)) {
+      vscode.window.showErrorMessage(`mcp-tools.json not found at ${toolsPath}`);
+      return;
+    }
+    try {
+      const content = fs.readFileSync(toolsPath, 'utf8');
+      const manifest = JSON.parse(content);
+      const tools = manifest.tools || [];
+      const categories: { [key: string]: any[] } = {};
+      for (const tool of tools) {
+        const category = tool.category || 'Uncategorized';
+        if (!categories[category]) categories[category] = [];
+        categories[category].push(tool);
+      }
+      const items: vscode.QuickPickItem[] = [];
+      for (const category in categories) {
+        items.push({ label: `--- ${category} ---`, kind: vscode.QuickPickItemKind.Separator });
+        for (const tool of categories[category]) {
+          items.push({
+            label: tool.name,
+            description: tool.description,
+            detail: tool.destructive ? 'Destructive' : 'Safe'
+          });
+        }
+      }
+      const pick = await vscode.window.showQuickPick(items, { placeHolder: 'Select a tool to view details' });
+      if (pick && pick.label.startsWith('---')) return; // separator
+      if (pick) {
+        const tool = tools.find((t: any) => t.name === pick.label);
+        if (tool) {
+          const details = `Name: ${tool.name}\nDescription: ${tool.description}\nDestructive: ${tool.destructive ? 'Yes' : 'No'}\nInput Schema: ${JSON.stringify(tool.inputSchema, null, 2)}`;
+          vscode.window.showInformationMessage(details, { modal: true });
+        }
+      }
+    } catch (err) {
+      vscode.window.showErrorMessage(`Failed to parse mcp-tools.json: ${err}`);
+    }
+  }
+
+  const restartServer = async () => {
     await stopServer();
     await startServer();
-  }
+  };
 
   // Commands
   const startCmd = vscode.commands.registerCommand('aiken-devtools.start', async () => startServer());
   const stopCmd = vscode.commands.registerCommand('aiken-devtools.stop', async () => stopServer());
   const restartCmd = vscode.commands.registerCommand('aiken-devtools.restart', async () => restartServer());
   const showLogsCmd = vscode.commands.registerCommand('aiken-devtools.showLogs', () => output.show(true));
+  const showToolsCmd = vscode.commands.registerCommand('aiken-devtools.showTools', async () => showTools());
 
   const openMenuCmd = vscode.commands.registerCommand('aiken-devtools.openMenu', async () => {
     const pick = await vscode.window.showQuickPick([
       { label: 'Start Server', id: 'start' },
       { label: 'Stop Server', id: 'stop' },
       { label: 'Restart Server', id: 'restart' },
-      { label: 'Show Logs', id: 'logs' }
+      { label: 'Show Logs', id: 'logs' },
+      { label: 'Show Tools', id: 'tools' }
     ]);
     if (!pick) return;
     if (pick.id === 'start') await startServer();
     if (pick.id === 'stop') await stopServer();
     if (pick.id === 'restart') await restartServer();
     if (pick.id === 'logs') output.show(true);
+    if (pick.id === 'tools') await showTools();
   });
 
-  context.subscriptions.push(startCmd, stopCmd, restartCmd, showLogsCmd, openMenuCmd, output, statusBar);
+  context.subscriptions.push(startCmd, stopCmd, restartCmd, showLogsCmd, openMenuCmd, showToolsCmd, output, statusBar);
 
   // ensure the server is stopped if extension is deactivated
   context.subscriptions.push({

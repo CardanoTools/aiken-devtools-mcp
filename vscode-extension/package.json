@@ -40,6 +40,10 @@
       {
         "command": "aiken-devtools.openMenu",
         "title": "Aiken Devtools: Actions"
+      },
+      {
+        "command": "aiken-devtools.showTools",
+        "title": "Aiken Devtools: Show Tools"
       }
     ],
     "configuration": {
@@ -57,6 +61,10 @@
           "type": "boolean",
           "description": "Disable readonly mode when launching the server (not recommended)."
         },
+        "aikenDevtools.requireConsent": {
+          "type": "boolean",
+          "description": "Require user consent before allowing destructive tools."
+        },
         "aikenDevtools.projectRoot": {
           "type": "string",
           "description": "Optional workspace-relative path or absolute path to the Aiken Devtools project root. If set, the extension will use this path to find the local server (dist/index.js)."
@@ -66,11 +74,13 @@
   },
   "scripts": {
     "build": "tsc -p ./",
-    "watch": "tsc -w -p ./"
+    "watch": "tsc -w -p ./",
+    "package": "vsce package"
   },
   "devDependencies": {
     "@types/node": "^25.0.10",
     "@types/vscode": "^1.108.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vsce": "^2.15.0"
   }
 }
