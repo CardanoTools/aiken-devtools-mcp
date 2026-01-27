@@ -92,11 +92,12 @@ export async function getProposalById(id: string): Promise<Proposal | undefined>
   return candidates.find((c) => c.id === id);
 }
 
-export async function approveProposal(id: string, opts?: { commit?: boolean; categoryOverride?: Category; }): Promise<{ ok: true; id: string; committed: boolean } | { ok: false; reason: string }> {
+export async function approveProposal(id: string, opts?: { commit?: boolean; categoryOverride?: Category; archive?: boolean; }): Promise<{ ok: true; id: string; committed: boolean } | { ok: false; reason: string }> {
   const p = await getProposalById(id);
   if (!p) return { ok: false, reason: `proposal '${id}' not found` };
   if (!p.spec) return { ok: false, reason: `proposal '${id}' does not contain a valid spec` };
 
+  const archive = opts?.archive ?? true;
   const category = (opts?.categoryOverride ?? p.spec.category ?? "documentation") as Category;
 
   // Ensure required fields
@@ -119,6 +120,18 @@ export async function approveProposal(id: string, opts?: { commit?: boolean; cat
       if (!ALL_KNOWLEDGE_SOURCES.find(s => s.id === spec.id)) {
         (ALL_KNOWLEDGE_SOURCES as unknown as KnowledgeSourceSpec[]).push(spec);
       }
+      // Archive original proposal if requested
+      if (archive) {
+        try {
+          const archiveDir = path.join(PROPOSALS_DIR, "approved");
+          await fs.mkdir(archiveDir, { recursive: true });
+          const stamped = `${id}-${Date.now()}.md`;
+          await fs.rename(p.path, path.join(archiveDir, stamped));
+        } catch {
+          // ignore archive errors
+        }
+      }
+
       return { ok: true, id: spec.id, committed: false };
     }
     return { ok: false, reason: `failed to write custom file: ${added.reason}` };
@@ -137,6 +150,18 @@ export async function approveProposal(id: string, opts?: { commit?: boolean; cat
       const msg = `chore: add knowledge source ${spec.id} (via proposal)`;
       const gc = await runGit({ cwd: process.cwd(), args: ["commit", "-m", msg], timeoutMs: 60_000 });
       if (gc.ok && gc.exitCode === 0) committed = true;
+    }
+  }
+
+  // Archive the original proposal if requested
+  if (archive) {
+    try {
+      const archiveDir = path.join(PROPOSALS_DIR, "approved");
+      await fs.mkdir(archiveDir, { recursive: true });
+      const stamped = `${id}-${Date.now()}.md`;
+      await fs.rename(p.path, path.join(archiveDir, stamped));
+    } catch {
+      // ignore archive errors
     }
   }
 
