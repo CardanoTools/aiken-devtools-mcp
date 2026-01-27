@@ -1,12 +1,17 @@
 import fs from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { resolveWorkspacePath } from "../aiken/runAiken";
-import { getWorkspaceRoot, resolveRepoDirPath, type KnowledgeRepo } from "../knowledge/knowledgePaths";
+import { ALL_KNOWLEDGE_SOURCES } from "../knowledge/index.js";
+import { resolveSourceDirPath } from "../knowledge/utils.js";
+import type { KnowledgeSource } from "../knowledge/types.js";
 
-const scopeSchema = z.enum(["project", "stdlib", "prelude", "evolution-sdk", "all"]);
+const SCOPE_IDS = ["project", ...ALL_KNOWLEDGE_SOURCES.map(s => s.id), "site-all", "evolution-all", "all"];
+// z.enum expects a readonly tuple at compile-time; assert here to satisfy Typescript
+const scopeSchema = z.enum(SCOPE_IDS as unknown as [string, ...string[]]);
 
 const inputSchema = z
   .object({
@@ -47,7 +52,7 @@ async function listFilesRecursively(rootDir: string, maxFiles: number): Promise<
   while (queue.length && files.length < maxFiles) {
     const dir = queue.shift()!;
 
-    let entries: Array<fs.Dirent>;
+    let entries: Dirent[];
     try {
       entries = await fs.readdir(dir, { withFileTypes: true });
     } catch {
@@ -88,7 +93,7 @@ async function searchFile(filePath: string, needleLower: string, maxLineLength: 
 
     for (let i = 0; i < lines.length; i++) {
       const lineText = lines[i];
-      if (lineText.toLowerCase().includes(needleLower)) {
+      if (lineText !== undefined && lineText.toLowerCase().includes(needleLower)) {
         const clipped = lineText.length > maxLineLength ? lineText.slice(0, maxLineLength - 1) + "…" : lineText;
         matches.push({ line: i + 1, text: clipped });
       }
@@ -101,29 +106,40 @@ async function searchFile(filePath: string, needleLower: string, maxLineLength: 
 }
 
 function resolveScopeRoots(scope: z.infer<typeof scopeSchema>): string[] {
-  const workspaceRoot = getWorkspaceRoot();
+  const workspaceRoot = process.cwd();
 
-  const roots: string[] = [];
-  const addRepo = (repo: KnowledgeRepo) => {
-    try {
-      roots.push(resolveRepoDirPath(repo));
-    } catch {
-      // ignore
+  const roots = new Set<string>();
+  const addSource = (source: KnowledgeSource) => {
+    const spec = ALL_KNOWLEDGE_SOURCES.find(s => s.id === source);
+    if (spec) {
+      roots.add(resolveSourceDirPath(spec));
     }
   };
 
-  if (scope === "project") roots.push(workspaceRoot);
-  if (scope === "stdlib") addRepo("stdlib");
-  if (scope === "prelude") addRepo("prelude");
-  if (scope === "evolution-sdk") addRepo("evolution-sdk");
-  if (scope === "all") {
-    roots.push(workspaceRoot);
-    addRepo("stdlib");
-    addRepo("prelude");
-    addRepo("evolution-sdk");
+  switch (scope) {
+    case "project":
+      roots.add(workspaceRoot);
+      break;
+    case "site-all":
+      for (const spec of ALL_KNOWLEDGE_SOURCES) {
+        if (spec.remoteUrl.includes("aiken-lang/site")) roots.add(resolveSourceDirPath(spec));
+      }
+      break;
+    case "evolution-all":
+      for (const spec of ALL_KNOWLEDGE_SOURCES) {
+        if (spec.remoteUrl.includes("lucid-evolution") || spec.remoteUrl.includes("evolution-sdk")) roots.add(resolveSourceDirPath(spec));
+      }
+      break;
+    case "all":
+      roots.add(workspaceRoot);
+      for (const spec of ALL_KNOWLEDGE_SOURCES) roots.add(resolveSourceDirPath(spec));
+      break;
+    default:
+      // individual source id
+      addSource(scope as KnowledgeSource);
   }
 
-  return roots;
+  return Array.from(roots);
 }
 
 export function registerAikenKnowledgeSearchTool(server: McpServer): void {
@@ -132,7 +148,9 @@ export function registerAikenKnowledgeSearchTool(server: McpServer): void {
     {
       title: "Aiken: knowledge search",
       description:
-        "Searches for text across the project plus cached stdlib/prelude/evolution-sdk sources (run aiken_knowledge_sync first).",
+        "Searches for text across the project and cached knowledge sources. " +
+        "Scopes include: project, stdlib[-aiken|-cardano], prelude, site-[fundamentals|language-tour|hello-world|vesting|uplc|all], " +
+        "evolution-[sdk|docs|docs-*|src|all], all. Run aiken_knowledge_sync first.",
       inputSchema,
       outputSchema,
       annotations: {
@@ -154,14 +172,44 @@ export function registerAikenKnowledgeSearchTool(server: McpServer): void {
       const limitFiles = maxFiles ?? 2000;
       const needleLower = query.toLowerCase();
 
-      const workspaceRoot = getWorkspaceRoot();
+      const workspaceRoot = process.cwd();
 
       const matches: Array<z.infer<typeof matchSchema>> = [];
       let truncated = false;
 
       for (const root of roots) {
         // Ensure root is within workspace, even for cached dirs.
-        const safeRoot = resolveWorkspacePath(workspaceRoot, root);
+        let safeRoot: string;
+        try {
+          safeRoot = resolveWorkspacePath(workspaceRoot, root);
+        } catch {
+          // skip roots that are not inside the workspace (e.g., not yet synced)
+          continue;
+        }
+
+        // If root is a file, search it directly instead of recursing
+        try {
+          const stat = await fs.stat(safeRoot);
+          if (stat.isFile()) {
+            if (!shouldIncludeFile(safeRoot, extensions)) continue;
+
+            const fileMatches = await searchFile(safeRoot, needleLower, 240);
+            for (const fm of fileMatches) {
+              matches.push({ filePath: safeRoot, line: fm.line, text: fm.text });
+              if (matches.length >= limitResults) {
+                truncated = true;
+                break;
+              }
+            }
+
+            if (truncated) break;
+            continue;
+          }
+        } catch {
+          // can't stat path - skip it
+          continue;
+        }
+
         const files = await listFilesRecursively(safeRoot, limitFiles);
 
         for (const filePath of files) {

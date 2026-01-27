@@ -3,33 +3,47 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { runGit } from "../git/runGit";
-import {
-  KNOWLEDGE_REPOS,
-  type KnowledgeRepo,
-  resolveCacheDirPath,
-  resolveRepoDirPath
-} from "../knowledge/knowledgePaths";
+import { KnowledgeSource, KnowledgeSourceSpec } from "../knowledge/types.js";
+import { ALL_KNOWLEDGE_SOURCES } from "../knowledge/index.js";
+import { getCacheBaseDir, resolveSourceDirPath, resolveRepoBaseDirPath } from "../knowledge/utils.js";
+
+const ALL_SOURCE_IDS = ALL_KNOWLEDGE_SOURCES.map(s => s.id);
+if (!ALL_SOURCE_IDS.length) {
+  throw new Error("No knowledge sources defined.");
+}
+// z.enum requires a readonly tuple; assert here to satisfy types
+const knowledgeSourceEnum = z.enum(ALL_SOURCE_IDS as unknown as [string, ...string[]]);
+
+// Default: one per unique repo (first source for each folderName)
+const DEFAULT_SOURCES: KnowledgeSource[] = Array.from(
+  new Map(ALL_KNOWLEDGE_SOURCES.map(s => [s.folderName, s])).values()
+).map(s => s.id);
 
 const inputSchema = z
   .object({
-    repos: z
-      .array(z.enum(["stdlib", "prelude", "evolution-sdk"]))
+    sources: z
+      .array(knowledgeSourceEnum)
       .optional()
-      .describe("Which repos to sync (default: [stdlib, prelude, evolution-sdk])."),
+      .describe(
+        "Which knowledge sources to sync. Multiple site-* sources share the same repo. " +
+        "Default: [stdlib, prelude, site-fundamentals, evolution-sdk]"
+      ),
     ref: z
       .string()
       .optional()
-      .describe("Git ref to checkout after syncing (default: each repo's defaultRef)."),
+      .describe("Git ref to checkout after syncing (default: each source's defaultRef)."),
     timeoutMs: z.number().int().positive().optional().describe("Timeout in milliseconds (default: 300000).")
   })
   .strict();
 
-const repoResultSchema = z
+const sourceResultSchema = z
   .object({
-    repo: z.enum(["stdlib", "prelude", "evolution-sdk"]),
+    source: knowledgeSourceEnum,
     remoteUrl: z.string(),
     path: z.string(),
+    subPath: z.string().optional(),
     ref: z.string(),
+    description: z.string(),
     ok: z.boolean(),
     stdout: z.string().optional(),
     stderr: z.string().optional(),
@@ -40,7 +54,7 @@ const repoResultSchema = z
 const outputSchema = z
   .object({
     cacheDir: z.string(),
-    results: z.array(repoResultSchema)
+    results: z.array(sourceResultSchema)
   })
   .strict();
 
@@ -53,16 +67,23 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
-async function syncOne(repo: KnowledgeRepo, refOverride: string | undefined, timeoutMs?: number) {
-  const spec = KNOWLEDGE_REPOS[repo];
-  const cacheDir = resolveCacheDirPath();
-  const repoDir = resolveRepoDirPath(repo);
+function getSourceSpec(source: KnowledgeSource): KnowledgeSourceSpec {
+  const spec = ALL_KNOWLEDGE_SOURCES.find(s => s.id === source);
+  if (!spec) throw new Error(`Unknown knowledge source: ${source}`);
+  return spec;
+}
+
+async function syncOne(source: KnowledgeSource, refOverride: string | undefined, timeoutMs?: number) {
+  const spec = getSourceSpec(source);
+  const cacheDir = getCacheBaseDir();
+  const repoBaseDir = resolveRepoBaseDirPath(spec);
+  const fullPath = resolveSourceDirPath(spec);
 
   await fs.mkdir(cacheDir, { recursive: true });
 
   const desiredRef = (refOverride && refOverride.trim().length ? refOverride.trim() : spec.defaultRef).trim();
 
-  const isRepoDir = await pathExists(repoDir);
+  const isRepoDir = await pathExists(repoBaseDir);
 
   if (!isRepoDir) {
     const clone = await runGit({
@@ -73,10 +94,12 @@ async function syncOne(repo: KnowledgeRepo, refOverride: string | undefined, tim
 
     if (!clone.ok) {
       return {
-        repo,
+        source,
         remoteUrl: spec.remoteUrl,
-        path: repoDir,
+        path: fullPath,
+        subPath: spec.subPath,
         ref: desiredRef,
+        description: spec.description,
         ok: false,
         error: clone.error
       };
@@ -84,10 +107,12 @@ async function syncOne(repo: KnowledgeRepo, refOverride: string | undefined, tim
 
     if (clone.exitCode !== 0) {
       return {
-        repo,
+        source,
         remoteUrl: spec.remoteUrl,
-        path: repoDir,
+        path: fullPath,
+        subPath: spec.subPath,
         ref: desiredRef,
+        description: spec.description,
         ok: false,
         stdout: clone.stdout,
         stderr: clone.stderr,
@@ -96,10 +121,12 @@ async function syncOne(repo: KnowledgeRepo, refOverride: string | undefined, tim
     }
 
     return {
-      repo,
+      source,
       remoteUrl: spec.remoteUrl,
-      path: repoDir,
+      path: fullPath,
+      subPath: spec.subPath,
       ref: desiredRef,
+      description: spec.description,
       ok: true,
       stdout: clone.stdout,
       stderr: clone.stderr
@@ -107,16 +134,27 @@ async function syncOne(repo: KnowledgeRepo, refOverride: string | undefined, tim
   }
 
   // Existing repo: fetch + checkout ref (best-effort).
-  const fetch = await runGit({ cwd: repoDir, args: ["fetch", "--all", "--tags", "--prune"], timeoutMs });
+  const fetch = await runGit({ cwd: repoBaseDir, args: ["fetch", "--all", "--tags", "--prune"], timeoutMs });
   if (!fetch.ok) {
-    return { repo, remoteUrl: spec.remoteUrl, path: repoDir, ref: desiredRef, ok: false, error: fetch.error };
+    return {
+      source,
+      remoteUrl: spec.remoteUrl,
+      path: fullPath,
+      subPath: spec.subPath,
+      ref: desiredRef,
+      description: spec.description,
+      ok: false,
+      error: fetch.error
+    };
   }
   if (fetch.exitCode !== 0) {
     return {
-      repo,
+      source,
       remoteUrl: spec.remoteUrl,
-      path: repoDir,
+      path: fullPath,
+      subPath: spec.subPath,
       ref: desiredRef,
+      description: spec.description,
       ok: false,
       stdout: fetch.stdout,
       stderr: fetch.stderr,
@@ -124,16 +162,27 @@ async function syncOne(repo: KnowledgeRepo, refOverride: string | undefined, tim
     };
   }
 
-  const checkout = await runGit({ cwd: repoDir, args: ["checkout", desiredRef], timeoutMs });
+  const checkout = await runGit({ cwd: repoBaseDir, args: ["checkout", desiredRef], timeoutMs });
   if (!checkout.ok) {
-    return { repo, remoteUrl: spec.remoteUrl, path: repoDir, ref: desiredRef, ok: false, error: checkout.error };
+    return {
+      source,
+      remoteUrl: spec.remoteUrl,
+      path: fullPath,
+      subPath: spec.subPath,
+      ref: desiredRef,
+      description: spec.description,
+      ok: false,
+      error: checkout.error
+    };
   }
   if (checkout.exitCode !== 0) {
     return {
-      repo,
+      source,
       remoteUrl: spec.remoteUrl,
-      path: repoDir,
+      path: fullPath,
+      subPath: spec.subPath,
       ref: desiredRef,
+      description: spec.description,
       ok: false,
       stdout: checkout.stdout,
       stderr: checkout.stderr,
@@ -142,13 +191,15 @@ async function syncOne(repo: KnowledgeRepo, refOverride: string | undefined, tim
   }
 
   // If ref is a branch, pulling is nice; if not, pull will fail — ignore failures.
-  const pull = await runGit({ cwd: repoDir, args: ["pull", "--ff-only"], timeoutMs });
+  const pull = await runGit({ cwd: repoBaseDir, args: ["pull", "--ff-only"], timeoutMs });
   if (pull.ok && pull.exitCode === 0) {
     return {
-      repo,
+      source,
       remoteUrl: spec.remoteUrl,
-      path: repoDir,
+      path: fullPath,
+      subPath: spec.subPath,
       ref: desiredRef,
+      description: spec.description,
       ok: true,
       stdout: [fetch.stdout, checkout.stdout, pull.stdout].filter(Boolean).join("\n"),
       stderr: [fetch.stderr, checkout.stderr, pull.stderr].filter(Boolean).join("\n")
@@ -156,10 +207,12 @@ async function syncOne(repo: KnowledgeRepo, refOverride: string | undefined, tim
   }
 
   return {
-    repo,
+    source,
     remoteUrl: spec.remoteUrl,
-    path: repoDir,
+    path: fullPath,
+    subPath: spec.subPath,
     ref: desiredRef,
+    description: spec.description,
     ok: true,
     stdout: [fetch.stdout, checkout.stdout].filter(Boolean).join("\n"),
     stderr: [fetch.stderr, checkout.stderr].filter(Boolean).join("\n")
@@ -170,9 +223,10 @@ export function registerAikenKnowledgeSyncTool(server: McpServer): void {
   server.registerTool(
     "aiken_knowledge_sync",
     {
-      title: "Aiken: knowledge sync (stdlib/prelude)",
+      title: "Aiken: knowledge sync",
       description:
-        "Clones or updates aiken-lang/stdlib, aiken-lang/prelude, and IntersectMBO/evolution-sdk into a local cache so agents can search/read them.",
+        "Clones or updates knowledge sources (stdlib, prelude, site docs, evolution-sdk) into a local cache. " +
+        "Multiple site-* sources share the same git repo but point to different documentation sections.",
       inputSchema,
       outputSchema,
       annotations: {
@@ -182,22 +236,35 @@ export function registerAikenKnowledgeSyncTool(server: McpServer): void {
         openWorldHint: true
       }
     },
-    async ({ repos, ref, timeoutMs }) => {
-      const selected = (repos?.length ? repos : (["stdlib", "prelude", "evolution-sdk"] as const)).slice();
+    async ({ sources, ref, timeoutMs }) => {
+      // Deduplicate sources that share the same folderName (same git repo)
+      const selectedSources: KnowledgeSource[] = sources?.length ? (sources as KnowledgeSource[]) : DEFAULT_SOURCES;
+      const seenFolders = new Set<string>();
+      const toSync: KnowledgeSource[] = [];
 
-      const results = [] as Array<z.infer<typeof repoResultSchema>>;
-      for (const repo of selected) {
-        const r = await syncOne(repo, ref, timeoutMs);
+      for (const source of selectedSources) {
+        const spec = getSourceSpec(source);
+        if (!seenFolders.has(spec.folderName)) {
+          seenFolders.add(spec.folderName);
+          toSync.push(source);
+        }
+      }
+
+      const results = [] as Array<z.infer<typeof sourceResultSchema>>;
+      for (const source of toSync) {
+        const r = await syncOne(source, ref, timeoutMs);
         results.push(r);
       }
 
       const structuredContent: z.infer<typeof outputSchema> = {
-        cacheDir: resolveCacheDirPath(),
+        cacheDir: getCacheBaseDir(),
         results
       };
 
       const okCount = results.filter((r) => r.ok).length;
-      const message = okCount === results.length ? `Synced ${okCount} repos.` : `Synced ${okCount}/${results.length} repos.`;
+      const message = okCount === results.length
+        ? `Synced ${okCount} knowledge source(s).`
+        : `Synced ${okCount}/${results.length} knowledge source(s).`;
 
       const anyError = results.some((r) => !r.ok);
       if (anyError) {

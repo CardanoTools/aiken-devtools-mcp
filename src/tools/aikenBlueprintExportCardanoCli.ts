@@ -90,6 +90,14 @@ export function registerAikenBlueprintExportCardanoCliTool(server: McpServer): v
       args.push("--to", "cardano-cli");
 
       const result = await runAiken({ cwd, args, timeoutMs });
+
+      if (!result.ok) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: result.error }]
+        };
+      }
+
       const commandResult: z.infer<typeof commandResultSchema> = {
         command: "aiken",
         args: result.args,

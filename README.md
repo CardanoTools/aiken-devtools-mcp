@@ -28,9 +28,19 @@ MCP (Model Context Protocol) tools for coding agents to understand, develop, and
 - `aiken_blueprint_integration_bundle_all`: computes the same bundle for every validator in the blueprint, with optional per-validator outputs (cardano-cli JSON and snippets).
 - `aiken_blueprint_integration_bundle_by_title`: computes the bundle for a validator selected by its blueprint title (no need to provide module/validator).
 - `aiken_blueprint_apply`: runs `aiken blueprint apply` (non-interactive; requires parameter CBOR hex). Optionally writes an output blueprint via `--out`.
-- `aiken_knowledge_sync`: clones/updates `aiken-lang/stdlib`, `aiken-lang/prelude`, and `IntersectMBO/evolution-sdk` into `.aiken-devtools-cache/` (so agents can search them).
-- `aiken_knowledge_search`: searches across project + cached stdlib/prelude sources for a string.
-- `aiken_knowledge_read_file`: reads a file from the workspace (including cached stdlib/prelude) by line range.
+- `aiken_knowledge_sync`: clones/updates knowledge sources into `.aiken-devtools-cache/` (so agents can search them). Sources include:
+  - **Aiken stdlib**: `stdlib`, `stdlib-aiken` (collections, crypto, math), `stdlib-cardano` (addresses, assets, transactions)
+  - **Aiken prelude**: `prelude` (core built-in types: Bool, Int, ByteArray, List, Option)
+  - **Aiken site docs**: `site-fundamentals` (eUTxO, patterns), `site-language-tour` (syntax, types), `site-hello-world`, `site-vesting`, `site-uplc`
+  - **Evolution SDK**: `evolution-sdk`, `evolution-docs`, `evolution-docs-addresses`, `evolution-docs-transactions`, `evolution-docs-wallets`, `evolution-docs-providers`, `evolution-docs-smart-contracts`, `evolution-docs-devnet`, `evolution-src`
+- `aiken_knowledge_search`: searches across project + cached knowledge sources. Scopes include:
+  - `project` - current workspace
+  - `stdlib`, `stdlib-aiken`, `stdlib-cardano` - Aiken standard library
+  - `prelude` - Aiken prelude
+  - `site-fundamentals`, `site-language-tour`, `site-hello-world`, `site-vesting`, `site-uplc`, `site-all` - Aiken documentation
+  - `evolution-sdk`, `evolution-docs`, `evolution-docs-*`, `evolution-src`, `evolution-all` - Evolution SDK
+  - `all` - search everything
+- `aiken_knowledge_read_file`: reads a file from the workspace (including cached knowledge sources) by line range.
 - `aiken_codegen_lucid_evolution`: generates a TypeScript snippet for `@lucid-evolution/lucid` from a validator (via `aiken blueprint convert --to cardano-cli`).
 - `aiken_codegen_evolution_sdk`: (preferred) generates a TypeScript snippet using `@evolution-sdk/evolution` packages from `IntersectMBO/evolution-sdk`.
 

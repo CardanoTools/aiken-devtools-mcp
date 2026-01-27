@@ -88,7 +88,7 @@ export function resolveWorkspacePath(workspaceRoot: string, relativeOrAbsolutePa
 
 - 25 tools covering the full Aiken development lifecycle
 - Code generation for both Evolution SDK and Lucid Evolution
-- Knowledge management with stdlib/prelude/evolution-sdk syncing
+- Knowledge management with stdlib/prelude/site/evolution-sdk syncing
 - Batch operations (e.g., `aiken_blueprint_integration_bundle_all`)
 
 ---
@@ -136,16 +136,20 @@ child.stdout.on("data", (chunk) => {
 });
 ```
 
-### 4. Knowledge Sync Hardcoded URLs
+### 4. ~~Knowledge Sync Hardcoded URLs~~ ✅ IMPROVED
 
 ```typescript
 // src/knowledge/knowledgePaths.ts
 remoteUrl: "https://github.com/aiken-lang/stdlib.git"
 ```
 
-URLs are hardcoded. If repos move, tool breaks with no user recourse.
+URLs are hardcoded but now properly configured with valid git URLs for all repositories:
+- `aiken-lang/stdlib` - Aiken standard library
+- `aiken-lang/prelude` - Aiken prelude
+- `aiken-lang/site` - Aiken documentation site (added)
+- `IntersectMBO/evolution-sdk` - Evolution SDK
 
-**Recommendation**: Consider making these configurable or at least document them clearly.
+**Status**: Fixed invalid URLs and added `aiken-lang/site` as a new knowledge source.
 
 ### 5. No Validation for extraArgs
 
@@ -194,6 +198,8 @@ const args = ["build", ...(extraArgs ?? [])];
 | Fix package name | ✅ Fixed |
 | Reorganize code | ✅ Fixed |
 | Add output limits | ✅ Fixed |
+| Fix knowledge URLs | ✅ Fixed |
+| Add site knowledge repo | ✅ Fixed |
 | Document limitations | 🔲 Open |
 
 ---
