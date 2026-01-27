@@ -2,9 +2,10 @@
   "name": "aiken-devtools-vscode",
   "displayName": "Aiken Devtools (MCP)",
   "description": "Launch the Aiken Devtools MCP server from VS Code (stdio transport) and manage basic permissions.",
-  "version": "0.0.0",
+  "version": "0.0.1",
+  "publisher": "cardanotools",
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.108.0"
   },
   "activationEvents": [],
   "main": "./dist/extension.js",
