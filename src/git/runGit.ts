@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
 
+const MAX_OUTPUT_SIZE = 10 * 1024 * 1024; // 10MB limit for stdout/stderr
+
 export type RunGitArgs = {
   cwd: string;
   args: string[];
@@ -55,11 +57,15 @@ export async function runGit(params: RunGitArgs): Promise<RunGitResult> {
     child.stderr.setEncoding("utf8");
 
     child.stdout.on("data", (chunk) => {
-      stdout += chunk;
+      if (stdout.length < MAX_OUTPUT_SIZE) {
+        stdout += chunk;
+      }
     });
 
     child.stderr.on("data", (chunk) => {
-      stderr += chunk;
+      if (stderr.length < MAX_OUTPUT_SIZE) {
+        stderr += chunk;
+      }
     });
 
     child.on("error", (error) => {

@@ -159,19 +159,8 @@ export const integrationBundleOutputSchema = z
   })
   .strict();
 
-function normalizeStep(result: RunAikenResult): z.infer<typeof stepSchema> {
-  if (!result.ok) {
-    return {
-      ok: false,
-      error: result.error,
-      command: "aiken",
-      args: result.args,
-      cwd: result.cwd
-    };
-  }
-
-
 type IntegrationBundleStructuredContent = z.infer<typeof integrationBundleOutputSchema>;
+
 type IntegrationBundleInput = {
   workspaceRoot: string;
   projectDir?: string;
@@ -195,6 +184,18 @@ type IntegrationBundleInput = {
   pretty?: boolean;
   timeoutMs?: number;
 };
+
+function normalizeStep(result: RunAikenResult): z.infer<typeof stepSchema> {
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: result.error,
+      command: "aiken",
+      args: result.args,
+      cwd: result.cwd
+    };
+  }
+
   const commandResult: z.infer<typeof commandResultSchema> = {
     command: "aiken",
     args: result.args,
