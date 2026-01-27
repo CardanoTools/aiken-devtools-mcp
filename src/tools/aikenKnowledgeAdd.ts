@@ -5,6 +5,7 @@ import path from "node:path";
 import { addCustomSource, ensureIndexExportsForCategory, type Category } from "../knowledge/customManager.js";
 import { runGit } from "../git/runGit.js";
 import { findSpecById } from "../knowledge/registry.js";
+import { ALL_KNOWLEDGE_SOURCES } from "../knowledge/index.js";
 import { KnowledgeSourceSpec } from "../knowledge/types.js";
 
 function slugify(s: string): string {
@@ -106,6 +107,11 @@ export function registerAikenKnowledgeAddTool(server: McpServer): void {
       const ensured = await ensureIndexExportsForCategory(category);
       if (!ensured.ok) {
         return { isError: true, content: [{ type: "text", text: `Added source but failed to update index.ts: ${ensured.reason}` }], structuredContent: { id: spec.id, path: added.path, committed: false } };
+      }
+
+      // Update runtime registry so other tools pick up the newly added source immediately.
+      if (!findSpecById(spec.id)) {
+        (ALL_KNOWLEDGE_SOURCES as unknown as KnowledgeSourceSpec[]).push(spec);
       }
 
       let committed = false;
