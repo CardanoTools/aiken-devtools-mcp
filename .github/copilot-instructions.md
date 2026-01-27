@@ -30,6 +30,20 @@ Knowledge & ingestion
 - `aiken_knowledge_sync`, `aiken_knowledge_ingest` and `aiken_knowledge_index` operate on a local cache/vector store under `var/vectors/` and can download large repos — run them deliberately and preferably in non-lockdown/dev-machine.
 - Use `npm run import:awesome` to generate `src/knowledge/awesome/awesomeAiken.ts` then run `npx mcp run aiken_knowledge_sync` to clone/cache sources.
 
+Useful Aiken knowledge links
+- Official Aiken site (docs & examples): https://github.com/aiken-lang/site
+- Aiken CLI & language repo: https://github.com/aiken-lang/aiken
+- Awesome Aiken (curated list, raw README): https://raw.githubusercontent.com/aiken-lang/awesome-aiken/main/README.md and repo https://github.com/aiken-lang/awesome-aiken
+- Aiken standard library: https://github.com/aiken-lang/stdlib
+- Lucid Evolution (Evolution SDK): https://github.com/Anastasia-Labs/lucid-evolution
+- MeshJS Aiken guide & template: https://meshjs.dev/guides/aiken and https://github.com/MeshJS/aiken-next-ts-template
+- Cardano Academy course (Aiken EUTxO): https://cardanofoundation.org/academy/course/aiken-eutxo-smart-contracts-cardano
+
+Local knowledge artifacts (in-repo)
+- `src/knowledge/data/awesome/awesomeAiken.ts` — generated list from Awesome Aiken
+- `src/knowledge/data/documentation/` — local documentation source specs (includes `customAdded.ts`)
+- `src/knowledge/data/libraries/` — curated library specs (e.g., `evolutionSdk.ts`)
+
 Testing and developer tasks
 - Integration/test scripts live in `scripts/` (many are plain Node scripts, e.g. `scripts/test_tool_search.js`). There is no single `npm test` wrapper — inspect/execute the script you need.
 - VS Code extension packaging task: see the workspace task "Package VS Code Extension" (runs `vscode-extension/npm install && npm run package`).
