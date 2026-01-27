@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createAikenDevtoolsServer } from "./server";
 import { applyCliOptions, loadPolicyFromFile, runtimeConfig } from "./runtimeConfig.js";

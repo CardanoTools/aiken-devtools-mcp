@@ -1,6 +1,15 @@
 # aiken-devtools-mcp
 
-MCP (Model Context Protocol) tools for coding agents to understand, develop, and integrate Aiken smart contracts.
+Node.js server implementing Model Context Protocol (MCP) for Aiken smart contract development.
+
+## Features
+
+- Aiken CLI integration (build, test, format, docs)
+- Blueprint analysis and integration bundle generation
+- Knowledge base management with semantic search
+- Code generation for Evolution SDK and Lucid
+- Tool discovery and dynamic configuration
+- Audit logging and policy enforcement
 
 ## Development
 
@@ -13,66 +22,226 @@ Running with policy & audit
 - A tool manifest is provided in `mcp-tools.json` and an administrator policy file `mcp-policy.json` can be used to restrict tools. Tool calls are recorded to `audit.log` (sensitive fields are redacted).
 - Use `npx aiken-devtools-mcp --allow-tools aiken_knowledge_add` to run the server with an explicit allowlist for selected destructive tools.
 
-## MCP tools
+## API
 
-### Aiken CLI Tools
-- `aiken_version`: returns the installed `aiken` CLI version (errors if `aiken` is not on `PATH`).
-- `aiken_check`: runs `aiken check`.
-- `aiken_build`: runs `aiken build` (writes artifacts).
-- `aiken_test`: runs `aiken test`.
-- `aiken_fmt`: runs `aiken fmt` (formats sources).
-- `aiken_docs`: runs `aiken docs` (generates docs).
-- `aiken_new`: creates a new Aiken project with `aiken new`.
+### Tools
 
-### Blueprint Tools
-- `aiken_blueprint_preamble`: reads `plutus.json` (or custom blueprint path) and returns the blueprint preamble + basic counts.
-- `aiken_blueprint_list_validators`: reads `plutus.json` and lists validators with metadata (optionally includes compiled code). Also returns inferred `module` and `validator` names when the title matches `module.validator`.
-- `aiken_blueprint_get_validator`: reads `plutus.json` and returns a single validator entry by title or index.
-- `aiken_blueprint_hash`: runs `aiken blueprint hash` to compute a validator payment credential hash (hex).
-- `aiken_blueprint_address`: runs `aiken blueprint address` to compute a spending validator address (bech32).
-- `aiken_blueprint_policy`: runs `aiken blueprint policy` to compute a minting policy ID.
-- `aiken_blueprint_convert`: runs `aiken blueprint convert` to produce a `cardano-cli` script JSON (includes `cborHex`).
-- `aiken_blueprint_export_cardano_cli`: runs `aiken blueprint convert --to cardano-cli`, parses JSON, and optionally writes it to a file.
-- `aiken_blueprint_integration_bundle`: computes `hash` + `address` + `policyId` (and optionally parses `cardano-cli` JSON + returns Evolution SDK/Lucid snippets) for a single validator.
-- `aiken_blueprint_integration_bundle_all`: computes the same bundle for every validator in the blueprint, with optional per-validator outputs (cardano-cli JSON and snippets).
-- `aiken_blueprint_integration_bundle_by_title`: computes the bundle for a validator selected by its blueprint title (no need to provide module/validator).
-- `aiken_blueprint_apply`: runs `aiken blueprint apply` (non-interactive; requires parameter CBOR hex). Optionally writes an output blueprint via `--out`.
+#### Aiken CLI Tools
 
-### Knowledge Tools
-- `aiken_knowledge_sync`: clones/updates knowledge sources into `.aiken-devtools-cache/` (so agents can search them). Sources include:
-  - **Aiken stdlib**: `stdlib`, `stdlib-aiken` (collections, crypto, math), `stdlib-cardano` (addresses, assets, transactions)
-  - **Aiken prelude**: `prelude` (core built-in types: Bool, Int, ByteArray, List, Option)
-  - **Aiken site docs**: `site-fundamentals` (eUTxO, patterns), `site-language-tour` (syntax, types), `site-hello-world`, `site-vesting`, `site-uplc`
-  - **Evolution SDK**: `evolution-sdk`, `evolution-docs`, `evolution-docs-addresses`, `evolution-docs-transactions`, `evolution-docs-wallets`, `evolution-docs-providers`, `evolution-docs-smart-contracts`, `evolution-docs-devnet`, `evolution-src`
-  - **Tip:** pass `{ "compact": true }` to `aiken_knowledge_sync` to return minimal results (no stdout/stderr) and reduce token usage.
-- `aiken_knowledge_search`: searches across project + cached knowledge sources. Scopes include:
-  - `project` - current workspace
-  - `stdlib`, `stdlib-aiken`, `stdlib-cardano` - Aiken standard library
-  - `prelude` - Aiken prelude
-  - `site-fundamentals`, `site-language-tour`, `site-hello-world`, `site-vesting`, `site-uplc`, `site-all` - Aiken documentation
-  - `evolution-sdk`, `evolution-docs`, `evolution-docs-*`, `evolution-src`, `evolution-all` - Evolution SDK
-  - `all` - search everything
-- `aiken_knowledge_list`: list known knowledge sources. Returns a compact list by default (id, category, folderName, subPath, remoteHost). Use `include: "full"` to return full specs. Supports filtering by `ids`, `category`, or `query`.
-- `aiken_knowledge_add`: add a new knowledge source programmatically. Input: `{ remoteUrl, category?, subPath?, description?, defaultRef?, folderName?, commit?, runSync? }`. This will write into `src/knowledge/<category>/customAdded.ts`, update the category index, and (optionally) commit the change for you.
-- `aiken_knowledge_read_file`: reads a file from the workspace (including cached knowledge sources) by line range.
-- `aiken_knowledge_ingest`: ingests a single knowledge source into the vector store.
-- `aiken_knowledge_bulk_ingest`: ingests multiple knowledge sources into the vector store.
-- `aiken_knowledge_proposals_list`: lists proposed knowledge sources that can be ingested.
-- `aiken_knowledge_approve`: approves and ingests proposed knowledge sources.
-- `aiken_knowledge_index`: indexes the vector store for search.
+- **aiken_version**
+  - Returns the installed `aiken` CLI version
+  - Errors if `aiken` is not on `PATH`
+  - Input: None
+  - Read-only
 
-### Codegen Tools
-- `aiken_codegen_lucid_evolution`: generates a TypeScript snippet for `@lucid-evolution/lucid` from a validator (via `aiken blueprint convert --to cardano-cli`).
-- `aiken_codegen_evolution_sdk`: (preferred) generates a TypeScript snippet using `@evolution-sdk/evolution` packages from `IntersectMBO/evolution-sdk`.
+- **aiken_check**
+  - Runs `aiken check` to validate project
+  - Input: `projectDir` (string, optional)
+  - Read-only
 
-### Discovery Tools
-- `aiken_server_manifest`: returns the server's manifest (tools, prompts, resources).
-- `aiken_tools_catalog`: returns a categorized list of tools (the server also exposes `mcp-tools.json` via a resource). Hosts can use this to present tools grouped by feature area (project, blueprint, knowledge, codegen, discovery).
-- `aiken_tool_search`: searches the local manifest for tools matching a query.
+- **aiken_build**
+  - Runs `aiken build` to compile the project
+  - Input: `projectDir` (string, optional), `extraArgs` (string, optional)
+  - Writes artifacts to disk
 
-### Toolset Tools
-- `aiken_toolsets_enable`: enables/disables toolsets at runtime.
-- `aiken_toolsets_list`: lists available/active toolsets.
+- **aiken_test**
+  - Runs `aiken test` to execute test suite
+  - Input: `projectDir` (string, optional), `extraArgs` (string, optional)
+  - Read-only
+
+- **aiken_fmt**
+  - Runs `aiken fmt` to format source code
+  - Input: `projectDir` (string, optional), `checkOnly` (boolean, optional), `extraArgs` (string, optional)
+  - Modifies source files
+
+- **aiken_docs**
+  - Runs `aiken docs` to generate documentation
+  - Input: `projectDir` (string, optional), `extraArgs` (string, optional)
+  - Writes documentation files
+
+- **aiken_new**
+  - Creates a new Aiken project
+  - Input: `name` (string), `projectDir` (string, optional), `template` (string, optional)
+  - Creates project directory and files
+
+#### Blueprint Tools
+
+- **aiken_blueprint_preamble**
+  - Reads blueprint preamble and basic counts
+  - Input: `projectDir` (string, optional), `blueprintPath` (string, optional)
+  - Read-only
+
+- **aiken_blueprint_list_validators**
+  - Lists validators with metadata
+  - Input: `projectDir` (string, optional), `blueprintPath` (string, optional), `includeCompiledCode` (boolean, optional)
+  - Read-only
+
+- **aiken_blueprint_get_validator**
+  - Returns a single validator entry
+  - Input: `projectDir` (string, optional), `blueprintPath` (string, optional), `title` (string, optional), `index` (number, optional)
+  - Read-only
+
+- **aiken_blueprint_hash**
+  - Computes validator payment credential hash
+  - Input: `projectDir` (string, optional), `blueprintPath` (string, optional), `module` (string), `validator` (string), `timeoutMs` (number, optional)
+  - Read-only
+
+- **aiken_blueprint_address**
+  - Computes spending validator address
+  - Input: `projectDir` (string, optional), `blueprintPath` (string, optional), `module` (string), `validator` (string), `timeoutMs` (number, optional)
+  - Read-only
+
+- **aiken_blueprint_policy**
+  - Computes minting policy ID
+  - Input: `projectDir` (string, optional), `blueprintPath` (string, optional), `module` (string), `validator` (string), `timeoutMs` (number, optional)
+  - Read-only
+
+- **aiken_blueprint_convert**
+  - Produces cardano-cli script JSON
+  - Input: `projectDir` (string, optional), `blueprintPath` (string, optional), `module` (string), `validator` (string), `timeoutMs` (number, optional)
+  - Read-only
+
+- **aiken_blueprint_export_cardano_cli**
+  - Exports cardano-cli script and optionally writes to file
+  - Input: `projectDir` (string, optional), `blueprintPath` (string, optional), `module` (string), `validator` (string), `outputPath` (string, optional), `timeoutMs` (number, optional)
+  - Optionally writes files
+
+- **aiken_blueprint_integration_bundle**
+  - Computes hash + address + policyId bundle for a validator
+  - Input: Complex object with project/module/validator details, optional code generation flags
+  - Read-only
+
+- **aiken_blueprint_integration_bundle_all**
+  - Computes integration bundle for all validators
+  - Input: Complex object with blueprint details and per-validator options
+  - Optionally writes files
+
+- **aiken_blueprint_integration_bundle_by_title**
+  - Computes bundle for validator selected by blueprint title
+  - Input: `projectDir`, `blueprintPath`, `title`, plus optional generation flags
+  - Read-only
+
+- **aiken_blueprint_apply**
+  - Applies blueprint with parameters
+  - Input: `projectDir` (string, optional), `blueprintPath` (string, optional), `module` (string), `validator` (string), `cborHex` (string), `out` (string, optional), `timeoutMs` (number, optional)
+  - Writes output blueprint
+
+#### Knowledge Tools
+
+- **aiken_knowledge_sync**
+  - Clones/updates knowledge sources into cache
+  - Input: `sources` (string[], optional), `ref` (string, optional), `timeoutMs` (number, optional), `compact` (boolean, optional)
+  - Downloads and caches repositories
+
+- **aiken_knowledge_search**
+  - Searches across project and cached knowledge
+  - Input: `query` (string), `scope` (string, optional), `maxResults` (number, optional), `maxFiles` (number, optional), `fileExtensions` (string[], optional)
+  - Read-only
+
+- **aiken_knowledge_list**
+  - Lists known knowledge sources
+  - Input: `ids` (string[], optional), `category` (string, optional), `query` (string, optional), `include` (string, optional)
+  - Read-only
+
+- **aiken_knowledge_add**
+  - Adds a new knowledge source
+  - Input: `remoteUrl` (string), plus optional metadata fields
+  - Modifies knowledge registry
+
+- **aiken_knowledge_read_file**
+  - Reads file from workspace or cached knowledge
+  - Input: `path` (string), `startLine` (number, optional), `endLine` (number, optional), `maxChars` (number, optional)
+  - Read-only
+
+- **aiken_knowledge_ingest**
+  - Ingests knowledge source into vector store
+  - Input: Complex object with URL and processing options
+  - Modifies vector store
+
+- **aiken_knowledge_bulk_ingest**
+  - Ingests multiple knowledge sources
+  - Input: `urls` (string[], optional), `gitUrls` (string[], optional), plus processing options
+  - Modifies vector store
+
+- **aiken_knowledge_proposals_list**
+  - Lists proposed knowledge sources
+  - Input: `query` (string, optional), `limit` (number, optional)
+  - Read-only
+
+- **aiken_knowledge_approve**
+  - Approves and ingests proposed sources
+  - Input: `id` (string), `commit` (boolean, optional), `archive` (boolean, optional), `category` (string, optional)
+  - Modifies knowledge registry and vector store
+
+- **aiken_knowledge_index**
+  - Indexes vector store for search
+  - Input: `proposalId` (string, optional), `sourceId` (string, optional), `collection` (string, optional), `chunkSize` (number, optional), `overlap` (number, optional)
+  - Modifies vector store
+
+#### Codegen Tools
+
+- **aiken_codegen_lucid_evolution**
+  - Generates TypeScript snippet for Lucid Evolution
+  - Input: `projectDir` (string, optional), `module` (string), `validator` (string), plus output options
+  - Read-only
+
+- **aiken_codegen_evolution_sdk**
+  - Generates TypeScript snippet for Evolution SDK (preferred)
+  - Input: `projectDir` (string, optional), `module` (string), `validator` (string), `networkId` (number), `exportName` (string, optional), plus options
+  - Read-only
+
+#### Discovery Tools
+
+- **aiken_server_manifest**
+  - Returns server's manifest
+  - Input: None
+  - Read-only
+
+- **aiken_tools_catalog**
+  - Returns categorized list of tools
+  - Input: None
+  - Read-only
+
+- **aiken_tool_search**
+  - Searches local manifest for tools
+  - Input: `query` (string), `maxResults` (number, optional)
+  - Read-only
+
+#### Toolset Tools
+
+- **aiken_toolsets_enable**
+  - Enables/disables toolsets at runtime
+  - Input: `toolsets` (string[]), `enable` (boolean)
+  - Modifies server configuration
+
+- **aiken_toolsets_list**
+  - Lists available/active toolsets
+  - Input: None
+  - Read-only
+
+### Tool annotations (MCP hints)
+
+This server sets [MCP ToolAnnotations](https://modelcontextprotocol.io/specification/2025-03-26/server/tools#toolannotations) on each tool so clients can distinguish read-only tools from write-capable tools and understand operation characteristics.
+
+| Tool Category | Read-only | Idempotent | Destructive | Notes |
+|---------------|-----------|------------|-------------|-------|
+| **CLI Tools** | Most read-only | Varies | Some modify files | `aiken_fmt` modifies sources |
+| **Blueprint Analysis** | Yes | Yes | No | Pure analysis |
+| **Blueprint Generation** | Most | Yes | Some write files | Export tools write files |
+| **Knowledge Search** | Yes | Yes | No | Pure search |
+| **Knowledge Management** | No | No | Yes | Modifies cache/registry |
+| **Codegen** | Yes | Yes | No | Pure generation |
+| **Discovery** | Yes | Yes | No | Pure discovery |
+| **Toolsets** | No | Yes | No | Runtime configuration |
+
+### MCP prompts
+
+- `aiken_validator_template`: Provides a basic template for writing an Aiken validator
+- `aiken_development_tips`: Offers tips for Aiken smart contract development
+
+### MCP resources
+
+- `mcp_tools_manifest`: The JSON manifest of all available tools
 
 ## Tool Discovery & Configuration
 
@@ -85,14 +254,37 @@ Running with policy & audit
 - Enable `--dynamic-toolsets` to allow runtime enabling/disabling of toolsets. When enabled, use `aiken_toolsets_enable` to toggle toolsets and `aiken_toolsets_list` to inspect available/active sets.
 - Lockdown mode (`--lockdown`) disables network-related tools to reduce exposure in sensitive environments. Insiders mode (`--insiders`) enables experimental tools that are hidden by default.
 
-## MCP prompts
+### Knowledge Management
+The server maintains a comprehensive knowledge base for Aiken development:
 
-- `aiken_validator_template`: Provides a basic template for writing an Aiken validator.
-- `aiken_development_tips`: Offers tips for Aiken smart contract development.
+**Built-in Sources:**
+- **Aiken stdlib**: Core collections, crypto, math, and Cardano-specific utilities
+- **Aiken prelude**: Built-in types (Bool, Int, ByteArray, List, Option)
+- **Aiken documentation**: Fundamentals, language tour, tutorials, UPLC
+- **Evolution SDK**: Complete SDK documentation and source code
 
-## MCP resources
+**Knowledge Workflow:**
+1. `aiken_knowledge_sync` - Clone/update sources to local cache
+2. `aiken_knowledge_ingest` - Process sources into vector store
+3. `aiken_knowledge_search` - Semantic search across all knowledge
+4. `aiken_knowledge_add` - Add custom knowledge sources
 
-- `mcp_tools_manifest`: The JSON manifest of all available tools.
+**Search Scopes:**
+- `project` - Current workspace files
+- `stdlib*` - Aiken standard library variants
+- `prelude` - Core language types
+- `site*` - Official documentation
+- `evolution*` - Evolution SDK resources
+- `all` - Everything
+
+### MCP prompts
+
+- `aiken_validator_template`: Provides a basic template for writing an Aiken validator
+- `aiken_development_tips`: Offers tips for Aiken smart contract development
+
+### MCP resources
+
+- `mcp_tools_manifest`: The JSON manifest of all available tools
 
 ## Recommended workflow
 

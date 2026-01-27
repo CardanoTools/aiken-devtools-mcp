@@ -1,53 +1,107 @@
-# Knowledge Workflow (aiken-devtools-mcp)
+# Knowledge Management Workflow
 
-This project provides tools to ingest, propose, review, and add knowledge sources that the MCP tools use to ground agents.
+This document describes the knowledge ingestion, proposal, approval, and search workflow in aiken-devtools-mcp.
 
-Overview
-- Ingest web pages or git repos: `aiken_knowledge_ingest` converts HTML → Markdown, chunks content, and writes a proposal markdown file under `src/knowledge/proposals/`.
-- Review proposals: `aiken_knowledge_proposals_list` lists pending proposals for human inspection.
-- Approve a proposal: `aiken_knowledge_approve` takes a proposal id and adds the `KnowledgeSourceSpec` to `src/knowledge/<category>/customAdded.ts` (optionally committing the change and archiving the proposal).
-- Sync knowledge: `aiken_knowledge_sync` clones or updates repositories into the local cache (use `compact: true` to reduce tool output tokens).
+## Overview
 
-Example flow (MCP tool calls):
-1) Ingest a URL:
+The knowledge management system allows agents to ingest external documentation, libraries, and examples into a searchable knowledge base. The workflow consists of four main phases:
+
+1. **Ingestion**: Convert web pages or git repositories into structured knowledge
+2. **Proposal**: Create reviewable proposals for new knowledge sources
+3. **Approval**: Human-reviewed approval of proposals
+4. **Search**: Semantic search across all ingested knowledge
+
+## Knowledge Sources
+
+The system supports multiple types of knowledge sources:
+
+- **Documentation**: Official docs, tutorials, guides
+- **Libraries**: Code libraries and frameworks
+- **Examples**: Sample projects and code snippets
+
+Built-in sources include Aiken stdlib, prelude, documentation, and Evolution SDK.
+
+## Workflow Steps
+
+### 1. Ingest Knowledge
+
+Use `aiken_knowledge_ingest` to ingest a single source:
+
 ```json
-{ "url": "https://github.com/aiken-lang/site" }
+{
+  "url": "https://github.com/aiken-lang/site",
+  "category": "documentation"
+}
 ```
-This writes `src/knowledge/proposals/aiken-lang-site.md` with a JSON `spec` and first chunk of Markdown.
 
-2) List proposals:
+Or `aiken_knowledge_bulk_ingest` for multiple sources:
+
 ```json
-{ }
+{
+  "urls": ["https://example.com/docs"],
+  "gitUrls": ["https://github.com/org/repo"],
+  "category": "documentation",
+  "autoAdd": true
+}
 ```
 
-3) Approve proposal (committed by default):
+### 2. Review Proposals
+
+List pending proposals with `aiken_knowledge_proposals_list`:
+
 ```json
-{ "id": "aiken-lang-site", "commit": true }
+{
+  "query": "aiken",
+  "limit": 10
+}
 ```
-This will add the spec to `src/knowledge/documentation/customAdded.ts`, update index exports, and commit the change. The original proposal will be moved to `src/knowledge/proposals/approved/`.
 
-Notes & next steps
-- HTML → Markdown conversion uses `turndown` for better Markdown proposals. For better web rendering (JS), consider integrating the MCP `fetch` server or a Playwright-based fetcher.
-- For semantic search, consider adding embeddings and a vector DB (Qdrant/Chroma) integration.
+### 3. Approve Proposals
 
-Security, transport, and policy
-- The server can be launched via stdio (default) for easy integration with VS Code / Copilot Chat / Claude Code: `npx aiken-devtools-mcp`.
-- By default the server runs in **readonly** safe mode. Use `--allow-tools` to allow specific tools or `--no-readonly` to disable readonly mode (not recommended for public use).
-- The tool manifest is provided in `mcp-tools.json` and an administrator policy can be placed in `mcp-policy.json` to enforce per-tool allow/disallow rules.
-- All tool calls are recorded to `audit.log` (redacts common secrets) for traceability.
+Approve a proposal with `aiken_knowledge_approve`:
 
-Bulk ingest
-- Use `aiken_knowledge_bulk_ingest` to ingest many URLs or git repositories in one call. It supports flags:
-  - `urls`: array of web URLs to ingest
-  - `gitUrls`: array of git repo URLs
-  - `category`: `documentation|library|example`
-  - `autoAdd`: automatically add accepted specs to `customAdded.ts`
-  - `commit`: whether to commit added files (default: true)
-  - `summarize`: request LLM summarization when available
-  - `renderJs`: use Playwright to render JS-driven pages
-  - `autoIndex`: compute embeddings for chunks and write to local vector store
+```json
+{
+  "id": "proposal-id",
+  "commit": true,
+  "category": "documentation"
+}
+```
 
-If you'd like, I can next integrate the MCP `fetch` server for more robust web ingestion or add an automatic summarization step (LLM-based) to produce short abstracts for each proposal.
+### 4. Sync and Search
+
+Sync all knowledge sources to local cache:
+
+```json
+{
+  "sources": ["all"],
+  "compact": true
+}
+```
+
+Search across knowledge:
+
+```json
+{
+  "query": "ScriptHash.fromScript",
+  "scope": "evolution-sdk",
+  "maxResults": 5
+}
+```
+
+## Security & Policy
+
+- Server runs in readonly mode by default
+- Use `--allow-tools` to enable destructive operations
+- Tool calls are audited to `audit.log`
+- Policy file `mcp-policy.json` can restrict tools
+
+## Advanced Features
+
+- **Embeddings**: Automatic vector embeddings for semantic search
+- **JS Rendering**: Playwright-based rendering for dynamic content
+- **Summarization**: LLM-generated abstracts for proposals
+- **Auto-indexing**: Background indexing of new sources
 
 Tool discovery, toolsets & categories
 - The server provides a categorized manifest (`mcp-tools.json`) for host discovery. Use the `aiken_tools_catalog` tool to retrieve a `byCategory` map of available tools, which is convenient for UIs (e.g., VS Code) to show grouped tools.
