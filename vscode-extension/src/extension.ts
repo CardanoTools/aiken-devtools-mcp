@@ -212,6 +212,21 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(startCmd, stopCmd, restartCmd, showLogsCmd, openMenuCmd, output, statusBar);
+
+  // ensure the server is stopped if extension is deactivated
+  context.subscriptions.push({
+    dispose: () => {
+      if (currentChild) {
+        try {
+          currentChild.kill('SIGKILL');
+        }
+        catch {
+          // ignore
+        }
+      }
+    }
+  });
+
   updateStatus();
 }
 
