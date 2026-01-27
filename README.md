@@ -33,6 +33,7 @@ MCP (Model Context Protocol) tools for coding agents to understand, develop, and
   - **Aiken prelude**: `prelude` (core built-in types: Bool, Int, ByteArray, List, Option)
   - **Aiken site docs**: `site-fundamentals` (eUTxO, patterns), `site-language-tour` (syntax, types), `site-hello-world`, `site-vesting`, `site-uplc`
   - **Evolution SDK**: `evolution-sdk`, `evolution-docs`, `evolution-docs-addresses`, `evolution-docs-transactions`, `evolution-docs-wallets`, `evolution-docs-providers`, `evolution-docs-smart-contracts`, `evolution-docs-devnet`, `evolution-src`
+  - **Tip:** pass `{ "compact": true }` to `aiken_knowledge_sync` to return minimal results (no stdout/stderr) and reduce token usage.
 - `aiken_knowledge_search`: searches across project + cached knowledge sources. Scopes include:
   - `project` - current workspace
   - `stdlib`, `stdlib-aiken`, `stdlib-cardano` - Aiken standard library
@@ -40,6 +41,11 @@ MCP (Model Context Protocol) tools for coding agents to understand, develop, and
   - `site-fundamentals`, `site-language-tour`, `site-hello-world`, `site-vesting`, `site-uplc`, `site-all` - Aiken documentation
   - `evolution-sdk`, `evolution-docs`, `evolution-docs-*`, `evolution-src`, `evolution-all` - Evolution SDK
   - `all` - search everything
+
+New knowledge tools:
+- `aiken_knowledge_list`: list known knowledge sources. Returns a compact list by default (id, category, folderName, subPath, remoteHost). Use `include: "full"` to return full specs. Supports filtering by `ids`, `category`, or `query`.
+- `aiken_knowledge_add`: add a new knowledge source programmatically. Input: `{ remoteUrl, category?, subPath?, description?, defaultRef?, folderName?, commit?, runSync? }`. This will write into `src/knowledge/<category>/customAdded.ts`, update the category index, and (optionally) commit the change for you.
+
 - `aiken_knowledge_read_file`: reads a file from the workspace (including cached knowledge sources) by line range.
 - `aiken_codegen_lucid_evolution`: generates a TypeScript snippet for `@lucid-evolution/lucid` from a validator (via `aiken blueprint convert --to cardano-cli`).
 - `aiken_codegen_evolution_sdk`: (preferred) generates a TypeScript snippet using `@evolution-sdk/evolution` packages from `IntersectMBO/evolution-sdk`.

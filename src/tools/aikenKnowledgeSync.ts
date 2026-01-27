@@ -32,7 +32,8 @@ const inputSchema = z
       .string()
       .optional()
       .describe("Git ref to checkout after syncing (default: each source's defaultRef)."),
-    timeoutMs: z.number().int().positive().optional().describe("Timeout in milliseconds (default: 300000).")
+    timeoutMs: z.number().int().positive().optional().describe("Timeout in milliseconds (default: 300000)."),
+    compact: z.boolean().optional().describe("If true, return minimal result fields to reduce token usage.")
   })
   .strict();
 
@@ -236,7 +237,7 @@ export function registerAikenKnowledgeSyncTool(server: McpServer): void {
         openWorldHint: true
       }
     },
-    async ({ sources, ref, timeoutMs }) => {
+    async ({ sources, ref, timeoutMs, compact }) => {
       // Deduplicate sources that share the same folderName (same git repo)
       const selectedSources: KnowledgeSource[] = sources?.length ? (sources as KnowledgeSource[]) : DEFAULT_SOURCES;
       const seenFolders = new Set<string>();
@@ -256,9 +257,14 @@ export function registerAikenKnowledgeSyncTool(server: McpServer): void {
         results.push(r);
       }
 
+      // If compact is requested, strip stdout/stderr from results to reduce token output size.
+      const compacted = compact
+        ? results.map((r) => ({ source: r.source, remoteUrl: r.remoteUrl, path: r.path, subPath: r.subPath, ref: r.ref, description: r.description, ok: r.ok, error: r.error }))
+        : results;
+
       const structuredContent: z.infer<typeof outputSchema> = {
         cacheDir: getCacheBaseDir(),
-        results
+        results: compacted as z.infer<typeof sourceResultSchema>[]
       };
 
       const okCount = results.filter((r) => r.ok).length;
