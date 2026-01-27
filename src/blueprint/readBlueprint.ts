@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
-import { resolveWorkspacePath } from "../aiken/runAiken";
+import { resolveWorkspacePath } from "../aiken/runAiken.js";
 
 const blueprintSchema = z
   .object({
@@ -21,21 +21,21 @@ export type ReadBlueprintArgs = {
 
 export type ReadBlueprintResult =
   | {
-      ok: true;
-      cwd: string;
-      blueprintFile: {
-        path: string;
-      };
-      blueprint: AikenBlueprint;
-    }
-  | {
-      ok: false;
-      cwd: string;
-      blueprintFile: {
-        path: string;
-      };
-      error: string;
+    ok: true;
+    cwd: string;
+    blueprintFile: {
+      path: string;
     };
+    blueprint: AikenBlueprint;
+  }
+  | {
+    ok: false;
+    cwd: string;
+    blueprintFile: {
+      path: string;
+    };
+    error: string;
+  };
 
 export async function readBlueprint(params: ReadBlueprintArgs): Promise<ReadBlueprintResult> {
   const workspaceRoot = process.cwd();

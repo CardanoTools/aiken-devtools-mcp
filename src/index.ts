@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createAikenDevtoolsServer } from "./server";
+import { createAikenDevtoolsServer } from "./server.js";
 import { applyCliOptions, loadPolicyFromFile, runtimeConfig } from "./runtimeConfig.js";
 
 function printUsage(): void {
   // eslint-disable-next-line no-console
-  console.error(`Usage: node dist/index.js [--transport stdio|tcp|ws] [--port N] [--readonly] [--allow-tools a,b] [--log <path>] [--max-fetch-size N]`);
+  console.error(`Usage: aiken-devtools-mcp [--transport stdio|tcp|ws] [--port N] [--readonly] [--allow-tools a,b] [--log <path>] [--max-fetch-size N]`);
 }
 
 async function main(): Promise<void> {

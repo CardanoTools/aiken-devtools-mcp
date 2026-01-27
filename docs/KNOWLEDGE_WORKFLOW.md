@@ -1,110 +1,122 @@
-# Knowledge Management Workflow
+# Knowledge Management
 
-This document describes the knowledge ingestion, proposal, approval, and search workflow in aiken-devtools-mcp.
+A token-optimized knowledge base for Aiken smart contract development with semantic search and curated content.
 
-## Overview
+## Quick Start
 
-The knowledge management system allows agents to ingest external documentation, libraries, and examples into a searchable knowledge base. The workflow consists of four main phases:
+```bash
+# Sync core knowledge sources
+npm run aiken_knowledge_sync -- '{"sources": ["core"]}'
 
-1. **Ingestion**: Convert web pages or git repositories into structured knowledge
-2. **Proposal**: Create reviewable proposals for new knowledge sources
-3. **Approval**: Human-reviewed approval of proposals
-4. **Search**: Semantic search across all ingested knowledge
+# Search for concepts
+npm run aiken_knowledge_search -- '{"query": "validator script", "scope": "fundamentals"}'
+```
 
-## Knowledge Sources
+## Knowledge Hierarchy
 
-The system supports multiple types of knowledge sources:
+### Core Sources (Always Available)
+- **fundamentals**: Getting started, installation, project structure
+- **language**: Syntax, types, functions, pattern matching
+- **stdlib**: Built-in functions and Cardano utilities
+- **prelude**: Core types (Bool, Int, ByteArray, List, Option)
 
-- **Documentation**: Official docs, tutorials, guides
-- **Libraries**: Code libraries and frameworks
-- **Examples**: Sample projects and code snippets
+### Extended Sources (Sync Required)
+- **examples**: Hello world, vesting contract, common patterns
+- **evolution**: Lucid Evolution SDK documentation and examples
+- **uplc**: Untyped Plutus Core reference
 
-Built-in sources include Aiken stdlib, prelude, documentation, and Evolution SDK.
+### Custom Sources (User-Added)
+- Community libraries and frameworks
+- Project-specific documentation
+- Research papers and specifications
 
-## Workflow Steps
+## Token-Optimized Search
 
-### 1. Ingest Knowledge
-
-Use `aiken_knowledge_ingest` to ingest a single source:
-
+### Semantic Search
 ```json
 {
-  "url": "https://github.com/aiken-lang/site",
-  "category": "documentation"
+  "query": "how to validate transaction inputs",
+  "scope": "fundamentals",
+  "maxResults": 3
 }
 ```
 
-Or `aiken_knowledge_bulk_ingest` for multiple sources:
+Returns ranked, concise results with:
+- Relevance score
+- Key code snippets (50-100 tokens each)
+- Source attribution
+- Minimal context
 
+### Text Search
 ```json
 {
-  "urls": ["https://example.com/docs"],
-  "gitUrls": ["https://github.com/org/repo"],
-  "category": "documentation",
-  "autoAdd": true
-}
-```
-
-### 2. Review Proposals
-
-List pending proposals with `aiken_knowledge_proposals_list`:
-
-```json
-{
-  "query": "aiken",
-  "limit": 10
-}
-```
-
-### 3. Approve Proposals
-
-Approve a proposal with `aiken_knowledge_approve`:
-
-```json
-{
-  "id": "proposal-id",
-  "commit": true,
-  "category": "documentation"
-}
-```
-
-### 4. Sync and Search
-
-Sync all knowledge sources to local cache:
-
-```json
-{
-  "sources": ["all"],
+  "query": "ScriptHash.fromScript",
+  "scope": "stdlib",
   "compact": true
 }
 ```
 
-Search across knowledge:
+Returns deduplicated matches with:
+- File location (relative path)
+- Line number
+- 80-char preview
+- No duplicates
 
+## Content Ingestion
+
+### Smart Chunking
+- **Context-aware**: Splits on section boundaries, not character count
+- **Token-efficient**: 500-800 tokens per chunk with intelligent overlap
+- **Quality-filtered**: Removes boilerplate, focuses on code and explanations
+
+### Quality Assurance
+- **Duplicate detection**: Avoids redundant content
+- **Relevance scoring**: Prioritizes practical examples over theory
+- **Freshness checks**: Updates stale documentation automatically
+
+## Workflow
+
+### 1. Sync Core Knowledge
+```json
+{"sources": ["core"], "compact": true}
+```
+Downloads and indexes essential Aiken documentation.
+
+### 2. Add Custom Sources
 ```json
 {
-  "query": "ScriptHash.fromScript",
-  "scope": "evolution-sdk",
-  "maxResults": 5
+  "remoteUrl": "https://github.com/my-org/aiken-lib.git",
+  "category": "library",
+  "description": "Custom Aiken utilities"
 }
 ```
 
-## Security & Policy
+### 3. Search & Learn
+```json
+{
+  "query": "minting policy",
+  "scope": "examples",
+  "maxResults": 2
+}
+```
 
-- Server runs in readonly mode by default
-- Use `--allow-tools` to enable destructive operations
-- Tool calls are audited to `audit.log`
-- Policy file `mcp-policy.json` can restrict tools
+## Performance
+
+- **Fast startup**: Core sources pre-indexed
+- **Incremental sync**: Only updates changed content
+- **Memory efficient**: Lazy loading and garbage collection
+- **Token aware**: Results sized for LLM context windows
+
+## Security
+
+- **Robots.txt compliance**: Respects site crawling policies
+- **Safe fetching**: Blocks private IPs and suspicious hosts
+- **Content validation**: Sanitizes and filters ingested content
+- **Audit logging**: All operations recorded
 
 ## Advanced Features
 
-- **Embeddings**: Automatic vector embeddings for semantic search
-- **JS Rendering**: Playwright-based rendering for dynamic content
-- **Summarization**: LLM-generated abstracts for proposals
-- **Auto-indexing**: Background indexing of new sources
-
-Tool discovery, toolsets & categories
-- The server provides a categorized manifest (`mcp-tools.json`) for host discovery. Use the `aiken_tools_catalog` tool to retrieve a `byCategory` map of available tools, which is convenient for UIs (e.g., VS Code) to show grouped tools.
-- Toolsets: group related tools into named sets (e.g., `project`, `knowledge`, `blueprint`). Start the server with `--toolsets <csv>` or set `AIKEN_TOOLSETS` environment variable to enable a set of toolsets at startup.
-- Dynamic toolsets: start the server with `--dynamic-toolsets` to allow runtime enabling/disabling of toolsets via the `aiken_toolsets_enable` tool. Use `aiken_toolsets_list` to inspect available toolsets and currently enabled sets.
-- Lockdown & Insiders: use `--lockdown` to restrict networked tools from running in sensitive environments; use `--insiders` to enable experimental/insiders-only tools (not enabled by default).
+- **Multi-provider embeddings**: OpenAI, Anthropic, Cohere, GitHub Copilot
+- **Vector storage**: Local file-based with optional external providers
+- **Proposal system**: Human-reviewed content additions
+- **Auto-categorization**: Intelligent source classification

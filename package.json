@@ -11,18 +11,19 @@
     "type": "git",
     "url": "https://github.com/CardanoTools/aiken-devtools-mcp.git"
   },
-  "type": "commonjs",
+  "type": "module",
   "bin": {
-    "aiken-devtools-mcp": "dist/index.js"
+    "aiken-devtools-mcp": "dist/index.cjs"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=cjs --outfile=dist/index.cjs --external:playwright --external:turndown --external:zod",
+    "typecheck": "tsc --noEmit",
     "watch": "tsc --watch",
     "test": "vitest run --coverage",
-    "start": "node dist/index.js",
+    "start": "node dist/index.cjs",
     "dev": "node --watch dist/index.js",
     "clean": "rm -rf dist",
     "import:awesome": "node scripts/import-awesome-aiken.js",
@@ -38,6 +39,7 @@
     "@types/node": "^22",
     "@types/turndown": "^5.0.6",
     "@vitest/coverage-v8": "^2.1.8",
+    "esbuild": "^0.27.2",
     "shx": "^0.3.4",
     "typescript": "^5.8.2",
     "vitest": "^2.1.8"

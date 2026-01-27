@@ -1,4 +1,4 @@
-import type { PlutusVersion } from "./cardanoCli";
+import type { PlutusVersion } from "./cardanoCli.js";
 
 export function generateEvolutionSdkSnippet(input: {
   cborHex: string;
@@ -23,14 +23,14 @@ export function generateEvolutionSdkSnippet(input: {
     `export const ${input.exportName}Script = new ${plutusModule}.${plutusModule}({ bytes: Bytes.fromHex(${input.exportName}CborHex) });\n` +
     (input.includeAddressAndHashes
       ? `\nexport const ${input.exportName}ScriptHash = ScriptHash.fromScript(${input.exportName}Script);\n` +
-        `export const ${input.exportName}PolicyIdHex = ScriptHash.toHex(${input.exportName}ScriptHash);\n` +
-        `\n// Enterprise address (no staking credential)\n` +
-        `export const ${input.exportName}AddressStruct = new Address.Address({\n` +
-        `  networkId: ${input.networkId},\n` +
-        `  paymentCredential: ${input.exportName}ScriptHash,\n` +
-        `  stakingCredential: undefined\n` +
-        `});\n` +
-        `export const ${input.exportName}AddressBech32 = Schema.encodeSync(Address.FromBech32)(${input.exportName}AddressStruct);\n`
+      `export const ${input.exportName}PolicyIdHex = ScriptHash.toHex(${input.exportName}ScriptHash);\n` +
+      `\n// Enterprise address (no staking credential)\n` +
+      `export const ${input.exportName}AddressStruct = new Address.Address({\n` +
+      `  networkId: ${input.networkId},\n` +
+      `  paymentCredential: ${input.exportName}ScriptHash,\n` +
+      `  stakingCredential: undefined\n` +
+      `});\n` +
+      `export const ${input.exportName}AddressBech32 = Schema.encodeSync(Address.FromBech32)(${input.exportName}AddressStruct);\n`
       : "")
   );
 }
