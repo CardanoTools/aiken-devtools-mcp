@@ -30,4 +30,21 @@ Notes & next steps
 - HTML → Markdown conversion uses `turndown` for better Markdown proposals. For better web rendering (JS), consider integrating the MCP `fetch` server or a Playwright-based fetcher.
 - For semantic search, consider adding embeddings and a vector DB (Qdrant/Chroma) integration.
 
+Security, transport, and policy
+- The server can be launched via stdio (default) for easy integration with VS Code / Copilot Chat / Claude Code: `npx aiken-devtools-mcp`.
+- By default the server runs in **readonly** safe mode. Use `--allow-tools` to allow specific tools or `--no-readonly` to disable readonly mode (not recommended for public use).
+- The tool manifest is provided in `mcp-tools.json` and an administrator policy can be placed in `mcp-policy.json` to enforce per-tool allow/disallow rules.
+- All tool calls are recorded to `audit.log` (redacts common secrets) for traceability.
+
+Bulk ingest
+- Use `aiken_knowledge_bulk_ingest` to ingest many URLs or git repositories in one call. It supports flags:
+  - `urls`: array of web URLs to ingest
+  - `gitUrls`: array of git repo URLs
+  - `category`: `documentation|library|example`
+  - `autoAdd`: automatically add accepted specs to `customAdded.ts`
+  - `commit`: whether to commit added files (default: true)
+  - `summarize`: request LLM summarization when available
+  - `renderJs`: use Playwright to render JS-driven pages
+  - `autoIndex`: compute embeddings for chunks and write to local vector store
+
 If you'd like, I can next integrate the MCP `fetch` server for more robust web ingestion or add an automatic summarization step (LLM-based) to produce short abstracts for each proposal.

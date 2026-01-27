@@ -11,6 +11,10 @@ export type IngestOptions = {
   maxChars?: number; // max characters to keep from page
   chunkSize?: number;
   overlap?: number;
+  renderJs?: boolean; // use Playwright to render JS-driven pages
+  summarize?: boolean; // produce a short summarization using LLM or extractive fallback
+  autoIndex?: boolean; // compute embeddings for chunks and store in local vector store
+  indexCollection?: string; // name for vector collection (defaults to spec.id)
 };
 
 export type IngestResult = {
@@ -159,10 +163,29 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
   const overlap = opts.overlap ?? 200;
   const category = opts.category ?? ("documentation" as Category);
 
-  const fetched = await fetchUrl(url, Math.max(10000, maxChars * 2));
-  if (!fetched.ok) throw new Error(`Failed to fetch ${url}: ${fetched.error}`);
+  // Optionally render JS-driven pages using Playwright if requested
+  let html: string;
+  if (opts.renderJs) {
+    // dynamic import to avoid requiring playwright unless requested
+    try {
+      const { chromium } = await import('playwright');
+      const browser = await chromium.launch({ args: ['--no-sandbox'] });
+      const page = await browser.newPage();
+      await page.goto(url, { timeout: 20_000 });
+      html = await page.content();
+      await browser.close();
+    } catch (err) {
+      // fallback to basic fetch
+      const fetched = await fetchUrl(url, Math.max(10000, maxChars * 2));
+      if (!fetched.ok) throw new Error(`Failed to fetch ${url}: ${fetched.error}`);
+      html = fetched.body;
+    }
+  } else {
+    const fetched = await fetchUrl(url, Math.max(10000, maxChars * 2));
+    if (!fetched.ok) throw new Error(`Failed to fetch ${url}: ${fetched.error}`);
+    html = fetched.body;
+  }
 
-  const html = fetched.body;
   // Prefer Markdown conversion for better proposals; fallback to plain text summary when needed.
   const markdown = ((): string => {
     try {
@@ -232,7 +255,40 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
     proposalPath = undefined;
   }
 
-  const summary = chunks.length ? (chunks[0] ?? "").slice(0, 512) : text.slice(0, 512);
+  // Summarize if requested (LLM if configured, otherwise extractive fallback)
+  let summary = chunks.length ? (chunks[0] ?? "").slice(0, 512) : text.slice(0, 512);
+  if (opts.summarize) {
+    try {
+      const { summarizeText } = await import("./summarizer.js");
+      summary = await summarizeText(text.slice(0, 20_000));
+    } catch (err) {
+      // ignore and fallback to first-chunk summary
+    }
+  }
+
+  // Optionally compute embeddings and store in local vector store
+  if (opts.autoIndex) {
+    try {
+      const { getEmbedding } = await import("./embeddings.js");
+      const { upsertVectors } = await import("./vectorStoreFile.js");
+      const collection = opts.indexCollection ?? spec.id;
+      const records = [] as Array<{ id: string; vector: number[]; metadata: Record<string, any> }>;
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i] ?? "";
+        if (!chunk) continue;
+        const emb = await getEmbedding(chunk);
+        if (!emb) continue; // skip if embeddings not available
+        records.push({ id: `${spec.id}#${i}`, vector: emb, metadata: { source: url, specId: spec.id, index: i, text: chunk.slice(0, 256) } });
+      }
+
+      if (records.length) {
+        await upsertVectors(collection, records);
+      }
+    } catch (err) {
+      // ignore indexing errors for now
+    }
+  }
 
   return {
     id: spec.id,

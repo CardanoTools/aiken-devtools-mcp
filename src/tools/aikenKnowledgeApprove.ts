@@ -26,7 +26,7 @@ export function registerAikenKnowledgeApproveTool(server: McpServer): void {
       description: "Approve a pending proposal: adds the KnowledgeSourceSpec to src/knowledge/<category>/customAdded.ts and commits if requested.",
       inputSchema,
       outputSchema,
-      annotations: { readOnlyHint: false, idempotentHint: false, destructiveHint: false, openWorldHint: true }
+      annotations: { readOnlyHint: false, idempotentHint: false, destructiveHint: true, openWorldHint: true }
     },
     async ({ id, commit, archive, category }) => {
       const p = await getProposalById(id);

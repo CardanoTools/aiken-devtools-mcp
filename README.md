@@ -8,6 +8,11 @@ MCP (Model Context Protocol) tools for coding agents to understand, develop, and
 - Build: `npm run build`
 - Run (stdio MCP server): `npm start`
 
+Running with policy & audit
+- The server runs in **readonly** mode by default to be safe. Use `--no-readonly` to disable readonly mode and `--allow-tools` to explicitly allow specific tools (e.g., `--allow-tools aiken_knowledge_add`).
+- A tool manifest is provided in `mcp-tools.json` and an administrator policy file `mcp-policy.json` can be used to restrict tools. Tool calls are recorded to `audit.log` (sensitive fields are redacted).
+- Use `npx aiken-devtools-mcp --allow-tools aiken_knowledge_add` to run the server with an explicit allowlist for selected destructive tools.
+
 ## MCP tools (current)
 
 - `aiken_version`: returns the installed `aiken` CLI version (errors if `aiken` is not on `PATH`).

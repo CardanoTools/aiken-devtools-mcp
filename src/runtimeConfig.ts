@@ -1,0 +1,74 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+
+export type PolicySpec = {
+  defaultAllow?: boolean;
+  allowed?: string[];
+  disallowed?: string[];
+};
+
+export const runtimeConfig = {
+  readonly: true, // default to safe mode
+  allowedTools: new Set<string>(), // explicit allowlist from CLI (empty = no CLI restriction)
+  logFilePath: path.join(process.cwd(), "audit.log"),
+  transport: "stdio" as "stdio" | "tcp" | "ws",
+  port: undefined as number | undefined,
+  authToken: undefined as string | undefined,
+  maxFetchSize: 200_000,
+  manifestPath: path.join(process.cwd(), "mcp-tools.json"),
+  policyPath: path.join(process.cwd(), "mcp-policy.json")
+};
+
+export const policy = {
+  defaultAllow: true,
+  allowed: new Set<string>(),
+  disallowed: new Set<string>()
+};
+
+export function applyCliOptions(opts: Partial<typeof runtimeConfig>): void {
+  if (typeof opts.readonly === "boolean") runtimeConfig.readonly = opts.readonly;
+  if (opts.logFilePath) runtimeConfig.logFilePath = opts.logFilePath;
+  if (opts.transport) runtimeConfig.transport = opts.transport;
+  if (typeof opts.port === "number") runtimeConfig.port = opts.port;
+  if (opts.authToken) runtimeConfig.authToken = opts.authToken;
+  if (typeof opts.maxFetchSize === "number") runtimeConfig.maxFetchSize = opts.maxFetchSize;
+  if (Array.isArray((opts as any).allowedTools)) {
+    runtimeConfig.allowedTools = new Set((opts as any).allowedTools as string[]);
+  }
+}
+
+export function setAllowedTools(list: string[]): void {
+  runtimeConfig.allowedTools = new Set(list);
+}
+
+export function isToolAllowed(name: string): boolean {
+  // CLI allowlist takes precedence when set
+  if (runtimeConfig.allowedTools && runtimeConfig.allowedTools.size > 0) {
+    return runtimeConfig.allowedTools.has(name);
+  }
+
+  // Policy file driven behavior
+  if (policy.allowed.size > 0) return policy.allowed.has(name);
+  if (policy.disallowed.size > 0) return !policy.disallowed.has(name);
+  return !!policy.defaultAllow;
+}
+
+export async function loadPolicyFromFile(): Promise<void> {
+  try {
+    const raw = await fs.readFile(runtimeConfig.policyPath, "utf8");
+    let parsed: PolicySpec = {};
+    try {
+      parsed = JSON.parse(raw) as PolicySpec;
+    } catch {
+      // ignore parse errors
+      return;
+    }
+
+    policy.defaultAllow = parsed.defaultAllow ?? true;
+
+    policy.allowed = new Set(parsed.allowed ?? []);
+    policy.disallowed = new Set(parsed.disallowed ?? []);
+  } catch {
+    // If no policy file present, leave defaults (open by default)
+  }
+}

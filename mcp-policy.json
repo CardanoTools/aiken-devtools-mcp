@@ -1,0 +1,16 @@
+{
+  "defaultAllow": false,
+  "allowed": [
+    "aiken_knowledge_list",
+    "aiken_knowledge_read_file",
+    "aiken_knowledge_search",
+    "aiken_knowledge_proposals_list"
+  ],
+  "disallowed": [
+    "aiken_knowledge_add",
+    "aiken_knowledge_approve",
+    "aiken_knowledge_bulk_ingest",
+    "aiken_knowledge_ingest",
+    "aiken_knowledge_index"
+  ]
+}

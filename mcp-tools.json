@@ -1,0 +1,67 @@
+{
+  "name": "aiken-devtools-mcp",
+  "displayName": "Aiken Devtools MCP",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "aiken_knowledge_list",
+      "title": "Aiken: Knowledge List",
+      "description": "List known knowledge sources",
+      "safety": "safe"
+    },
+    {
+      "name": "aiken_knowledge_read_file",
+      "title": "Aiken: Knowledge Read File",
+      "description": "Read file content from a synced repo",
+      "safety": "safe"
+    },
+    {
+      "name": "aiken_knowledge_search",
+      "title": "Aiken: Knowledge Search",
+      "description": "Search content across sources",
+      "safety": "safe"
+    },
+    {
+      "name": "aiken_knowledge_sync",
+      "title": "Aiken: Knowledge Sync",
+      "description": "Clone/update knowledge repositories",
+      "safety": "network"
+    },
+    {
+      "name": "aiken_knowledge_add",
+      "title": "Aiken: Knowledge Add",
+      "description": "Add a new KnowledgeSourceSpec to customAdded.ts",
+      "safety": "destructive"
+    },
+    {
+      "name": "aiken_knowledge_ingest",
+      "title": "Aiken: Knowledge Ingest",
+      "description": "Propose a web or repo source by fetching and converting to markdown",
+      "safety": "network"
+    },
+    {
+      "name": "aiken_knowledge_proposals_list",
+      "title": "Aiken: Knowledge Proposals List",
+      "description": "List pending proposals",
+      "safety": "safe"
+    },
+    {
+      "name": "aiken_knowledge_approve",
+      "title": "Aiken: Knowledge Approve",
+      "description": "Approve a proposal and add it to customAdded.ts",
+      "safety": "destructive"
+    },
+    {
+      "name": "aiken_knowledge_index",
+      "title": "Aiken: Knowledge Index",
+      "description": "Index chunks to vector store",
+      "safety": "network"
+    },
+    {
+      "name": "aiken_knowledge_bulk_ingest",
+      "title": "Aiken: Bulk Ingest",
+      "description": "Bulk ingest many URLs or git repos",
+      "safety": "destructive"
+    }
+  ]
+}

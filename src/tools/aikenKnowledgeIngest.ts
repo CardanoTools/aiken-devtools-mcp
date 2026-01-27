@@ -47,7 +47,11 @@ const inputSchema = z
     autoAdd: z.boolean().optional().describe("If true, automatically add the proposed source to customAdded.ts (default: false)."),
     commit: z.boolean().optional().describe("When autoAdd is used, commit the change to git (default: true)."),
     runSync: z.boolean().optional().describe("When autoAdd is used, attempt to run a sync after adding (best-effort, may be a no-op)."),
-    fetchOptions: z.object({ maxChars: z.number().int().positive().optional(), chunkSize: z.number().int().positive().optional() }).optional()
+    fetchOptions: z.object({ maxChars: z.number().int().positive().optional(), chunkSize: z.number().int().positive().optional() }).optional(),
+    renderJs: z.boolean().optional().describe("If true, render JS with Playwright before extracting content."),
+    summarize: z.boolean().optional().describe("If true, generate a short summary using configured summarizer (OPENAI_API_KEY or fallback)."),
+    autoIndex: z.boolean().optional().describe("If true, compute embeddings for chunks and store in local vector store (OPENAI_API_KEY required)."),
+    indexCollection: z.string().optional().describe("Optional collection name for the vector store (defaults to spec.id).")
   })
   .strict();
 
@@ -84,7 +88,7 @@ export function registerAikenKnowledgeIngestTool(server: McpServer): void {
         openWorldHint: true
       }
     },
-    async ({ url, gitUrl, category: categoryIn, autoAdd, commit, runSync, fetchOptions }) => {
+    async ({ url, gitUrl, category: categoryIn, autoAdd, commit, runSync, fetchOptions, renderJs, summarize, autoIndex, indexCollection }) => {
       const category = (categoryIn ?? "documentation") as Category;
 
       if (!url && !gitUrl) {
@@ -95,7 +99,7 @@ export function registerAikenKnowledgeIngestTool(server: McpServer): void {
 
       if (url) {
         try {
-          const res = await ingestUrl(url, { category, maxChars: fetchOptions?.maxChars, chunkSize: fetchOptions?.chunkSize });
+          const res = await ingestUrl(url, { category, maxChars: fetchOptions?.maxChars, chunkSize: fetchOptions?.chunkSize, renderJs: !!renderJs, summarize: !!summarize, autoIndex: !!autoIndex, indexCollection });
           proposals.push({ id: res.id, title: res.title, summary: res.summary, chunks: res.chunks.length, proposalPath: res.proposalPath, spec: res.spec });
         } catch (err) {
           return { isError: true, content: [{ type: "text", text: `Failed to ingest url '${url}': ${(err instanceof Error && err.message) || String(err)}` }] };
