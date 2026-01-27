@@ -85,7 +85,12 @@ async function fetchUrl(url: string, maxBytes = 200_000): Promise<{ ok: true; st
   }
 }
 
+import TurndownService from "turndown";
+
+const turndown = new TurndownService({ headingStyle: "atx" });
+
 function htmlToText(html: string): string {
+  // Fallback text extraction for simple summaries; prefer Markdown where possible.
   let s = html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, " ");
   s = s.replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, " ");
 
@@ -106,7 +111,7 @@ function htmlToText(html: string): string {
   return s;
 }
 
-function chunkText(text: string, chunkSize = 3000, overlap = 200): string[] {
+export function chunkText(text: string, chunkSize = 3000, overlap = 200): string[] {
   const chunks: string[] = [];
   let i = 0;
   while (i < text.length) {
@@ -158,7 +163,16 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
   if (!fetched.ok) throw new Error(`Failed to fetch ${url}: ${fetched.error}`);
 
   const html = fetched.body;
-  const text = htmlToText(html).slice(0, maxChars);
+  // Prefer Markdown conversion for better proposals; fallback to plain text summary when needed.
+  const markdown = ((): string => {
+    try {
+      return turndown.turndown(html);
+    } catch {
+      return htmlToText(html);
+    }
+  })();
+
+  const text = markdown.slice(0, maxChars);
   const chunks = chunkText(text, chunkSize, overlap);
   const title = extractTitleFromHtml(html) ?? url;
 
@@ -210,7 +224,7 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
     }
 
     const fileSummary = chunks.length ? (chunks[0] ?? "").slice(0, 1000) : text.slice(0, 1000);
-    const content = `# Proposal: ${spec.id}\n\nURL: ${url}\n\nTitle: ${title}\n\nSummary:\n\n${fileSummary}\n\nSpec:\n\n\`\`\`json\n${JSON.stringify(spec, null, 2)}\n\`\`\`\n\nFirst chunk:\n\n\`\`\`\n${chunks[0] ?? text}\n\`\`\``;
+    const content = `# Proposal: ${spec.id}\n\nURL: ${url}\n\nTitle: ${title}\n\nSummary:\n\n${fileSummary}\n\nSpec:\n\n\`\`\`json\n${JSON.stringify(spec, null, 2)}\n\`\`\`\n\nFull Markdown (first ${Math.min(32000, text.length)} chars):\n\n\`\`\`markdown\n${text.slice(0, 32000)}\n\`\`\``;
 
     await fs.writeFile(proposalPath, content, "utf8");
   } catch (err) {
