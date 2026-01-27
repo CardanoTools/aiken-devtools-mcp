@@ -36,6 +36,7 @@ import { registerAikenToolsCatalogTool } from "./tools/aikenToolsCatalog";
 import { registerAikenToolsetsTools } from "./tools/aikenToolsets";
 import { registerAikenToolSearchTool } from "./tools/aikenToolSearch";
 import { registerAikenTestTool } from "./tools/aikenTest";
+import { registerAikenNewTool } from "./tools/aikenNew";
 import { registerAikenVersionTool } from "./tools/aikenVersion";
 
 export function createAikenDevtoolsServer(): McpServer {
@@ -73,12 +74,75 @@ export function createAikenDevtoolsServer(): McpServer {
     // ignore resource registration errors
   }
 
+  // register prompts for Aiken development
+  try {
+    server.registerPrompt(
+      "aiken_validator_template",
+      { description: "Get a template for writing an Aiken validator" },
+      async () => {
+        return {
+          description: "A basic Aiken validator template",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `Here's a basic template for an Aiken validator:
+
+\`\`\`aiken
+validator {
+  fn spend(datum: Data, redeemer: Data, context: Data) -> Bool {
+    // Your validation logic here
+    True
+  }
+}
+\`\`\`
+
+Use the aiken_blueprint_* tools to work with your validator blueprints.`
+              }
+            }
+          ]
+        };
+      }
+    );
+
+    server.registerPrompt(
+      "aiken_development_tips",
+      { description: "Get tips for Aiken smart contract development" },
+      async () => {
+        return {
+          description: "Tips for Aiken development",
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `Tips for Aiken smart contract development:
+
+1. Use \`aiken check\` to validate your code before building.
+2. Leverage the standard library for common operations.
+3. Test your validators thoroughly with \`aiken test\`.
+4. Use blueprints to manage validator metadata and addresses.
+5. Format your code with \`aiken fmt\` for consistency.
+
+Use the knowledge search tools to find examples and documentation.`
+              }
+            }
+          ]
+        };
+      }
+    );
+  } catch {
+    // ignore prompt registration errors
+  }
+
   registerAikenVersionTool(server);
   registerAikenCheckTool(server);
   registerAikenBuildTool(server);
   registerAikenTestTool(server);
   registerAikenFmtTool(server);
   registerAikenDocsTool(server);
+  registerAikenNewTool(server);
 
   registerAikenBlueprintPreambleTool(server);
   registerAikenBlueprintListValidatorsTool(server);
