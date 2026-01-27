@@ -15,6 +15,10 @@ export const runtimeConfig = {
   dynamicToolsets: false, // allow enabling toolsets at runtime
   insiders: false, // allow experimental/insiders tools
   lockdownMode: false, // restrict content surfaced by tools
+  // obey robots.txt by default when ingesting remote content
+  obeyRobots: true,
+  // cache TTL for robots.txt lookups (ms)
+  robotsCacheTtl: 10 * 60_000,
   logFilePath: path.join(process.cwd(), "audit.log"),
   transport: "stdio" as "stdio" | "tcp" | "ws",
   port: undefined as number | undefined,
@@ -46,6 +50,8 @@ export function applyCliOptions(opts: Partial<typeof runtimeConfig>): void {
   if (typeof (opts as any).dynamicToolsets === "boolean") runtimeConfig.dynamicToolsets = (opts as any).dynamicToolsets;
   if (typeof (opts as any).insiders === "boolean") runtimeConfig.insiders = (opts as any).insiders;
   if (typeof (opts as any).lockdownMode === "boolean") runtimeConfig.lockdownMode = (opts as any).lockdownMode;
+  if (typeof (opts as any).obeyRobots === "boolean") runtimeConfig.obeyRobots = (opts as any).obeyRobots;
+  if (typeof (opts as any).robotsCacheTtl === "number") runtimeConfig.robotsCacheTtl = (opts as any).robotsCacheTtl;
 }
 
 export function setAllowedTools(list: string[]): void {

@@ -2,9 +2,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import http from "node:http";
 import https from "node:https";
+import dns from "node:dns/promises";
+import net from "node:net";
 
 import type { KnowledgeSourceSpec } from "./types.js";
 import type { Category } from "./customManager.js";
+import { runtimeConfig } from "../runtimeConfig.js";
+
+// in-memory cache for robots.txt per host
+const robotsCache: Map<string, { fetchedAt: number; content: string }> = new Map();
 
 export type IngestOptions = {
   category?: Category;
@@ -39,6 +45,18 @@ async function fetchUrl(url: string, maxBytes = 200_000): Promise<{ ok: true; st
   try {
     const parsed = new URL(url);
     const lib = parsed.protocol === "https:" ? https : http;
+
+    // Only support http(s) here
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return { ok: false, error: `unsupported protocol ${parsed.protocol}` };
+    }
+
+    // prevent SSRF: resolve hostname and block private/loopback addresses
+    try {
+      await checkHostSafe(parsed.hostname);
+    } catch (err) {
+      return { ok: false, error: String(err instanceof Error ? err.message : err) };
+    }
 
     return await new Promise((resolve) => {
       const req = lib.get(url, { headers: { "user-agent": "aiken-devtools-mcp/1.0 (+https://github.com/CardanoTools/aiken-devtools-mcp)" } }, (res) => {
@@ -157,11 +175,190 @@ function detectGithubRepo(url: string) {
   }
 }
 
+// ---------- Safety helpers (SSRF, robots.txt) ----------
+function isPrivateIp(addr: string): boolean {
+  try {
+    const ver = net.isIP(addr);
+    if (ver === 4) {
+      const parts = addr.split('.').map((s) => Number(s));
+      if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return false;
+      const [a, b, c, d] = parts as [number, number, number, number];
+      if (a === 10) return true;
+      if (a === 127) return true;
+      if (a === 169 && b === 254) return true;
+      if (a === 192 && b === 168) return true;
+      if (a === 172 && b >= 16 && b <= 31) return true;
+      if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+      if (a === 0) return true;
+      if (a >= 224) return true; // multicast/reserved
+      return false;
+    }
+
+    if (ver === 6) {
+      const s = addr.toLowerCase();
+      if (s === '::1') return true;
+      if (s.startsWith('fe80:')) return true; // link-local
+      if (s.startsWith('fc') || s.startsWith('fd')) return true; // unique local
+      if (s.startsWith('::ffff:')) {
+        // IPv4 mapped
+        const tail = s.replace('::ffff:', '');
+        return isPrivateIp(tail);
+      }
+      return false;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+async function checkHostSafe(hostname: string): Promise<void> {
+  if (!hostname) return;
+  const lc = hostname.toLowerCase();
+  if (lc === 'localhost' || lc === 'localhost.localdomain' || lc === 'ip6-localhost') {
+    throw new Error(`host ${hostname} is local/loopback`);
+  }
+
+  // If hostname already looks like an IP, validate directly
+  if (net.isIP(hostname)) {
+    if (isPrivateIp(hostname)) throw new Error(`host resolves to private IP: ${hostname}`);
+    return;
+  }
+
+  // resolve all addresses and ensure none are private/reserved
+  try {
+    const addrs = await dns.lookup(hostname, { all: true });
+    if (!Array.isArray(addrs) || addrs.length === 0) return;
+    for (const a of addrs) {
+      const ip = String((a as any).address ?? a);
+      if (isPrivateIp(ip)) throw new Error(`host resolves to private/reserved IP: ${ip}`);
+    }
+  } catch (err) {
+    throw new Error(`failed to resolve host ${hostname}: ${String(err instanceof Error ? err.message : err)}`);
+  }
+}
+
+export function parseRobotsTxt(robotsText: string, urlPath: string, userAgent = "aiken-devtools-mcp"): boolean {
+  // Return true when allowed, false when disallowed. Simple prefix-based matching.
+  const linesRaw = robotsText.split(/\r?\n/);
+  const lines = linesRaw.map((l: string) => String(l).replace(/#.*/, '').trim()).filter(Boolean);
+  type Group = { agents: string[]; allow: string[]; disallow: string[] };
+  const groups: Group[] = [];
+  let cur: Group | null = null;
+
+  for (const l of lines) {
+    const i = l.indexOf(":");
+    if (i === -1) continue;
+    const key = l.slice(0, i).trim().toLowerCase();
+    const val = l.slice(i + 1).trim();
+    if (key === "user-agent") {
+      cur = { agents: [val.toLowerCase()], allow: [], disallow: [] };
+      groups.push(cur);
+    } else if (!cur) {
+      // skip
+    } else if (key === "allow") {
+      cur.allow.push(val);
+    } else if (key === "disallow") {
+      cur.disallow.push(val);
+    }
+  }
+
+  const ua = userAgent.toLowerCase();
+
+  // find agent-specific group first
+  let target: Group | undefined;
+  for (const g of groups) {
+    for (const a of g.agents) {
+      if (a === ua) {
+        target = g;
+        break;
+      }
+    }
+    if (target) break;
+  }
+
+  // fallback to wildcard
+  if (!target) {
+    for (const g of groups) {
+      if (g.agents.includes('*')) {
+        target = g;
+        break;
+      }
+    }
+  }
+
+  // no rules -> allowed
+  if (!target) return true;
+
+  const tp = urlPath || '/';
+  // allow rules take precedence if they match
+  for (const a of target.allow) {
+    if (!a) continue;
+    if (tp.startsWith(a)) return true;
+  }
+
+  for (const d of target.disallow) {
+    if (!d) continue;
+    if (d === '/') return false;
+    if (tp.startsWith(d)) return false;
+  }
+
+  return true;
+}
+
+async function isAllowedByRobots(url: string): Promise<boolean> {
+  if (!runtimeConfig.obeyRobots) return true;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return true;
+
+    // ensure host is safe before attempting to fetch robots
+    await checkHostSafe(parsed.hostname);
+
+    const host = parsed.hostname;
+    const now = Date.now();
+    const cached = robotsCache.get(host);
+    if (cached && now - cached.fetchedAt < (runtimeConfig.robotsCacheTtl ?? 600_000)) {
+      return parseRobotsTxt(cached.content, parsed.pathname + (parsed.search || ''));
+    }
+
+    const robotsUrl = `${parsed.protocol}//${host}/robots.txt`;
+    const fetched = await fetchUrl(robotsUrl, 16_000);
+    if (!fetched.ok) {
+      // treat lack of robots file as allowed
+      robotsCache.set(host, { fetchedAt: now, content: '' });
+      return true;
+    }
+
+    robotsCache.set(host, { fetchedAt: now, content: fetched.body });
+    return parseRobotsTxt(fetched.body, parsed.pathname + (parsed.search || ''));
+  } catch (err) {
+    // On resolution errors we want to block higher up; but parsing failures -> allow to avoid false negatives
+    if (err instanceof Error && /private|loopback|resolve/i.test(err.message)) throw err;
+    return true;
+  }
+}
+
 export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<IngestResult> {
   const maxChars = opts.maxChars ?? 80_000;
   const chunkSize = opts.chunkSize ?? 3000;
   const overlap = opts.overlap ?? 200;
   const category = opts.category ?? ("documentation" as Category);
+
+  // Enforce lockdown and robots policy checks early
+  try {
+    const parsedCheck = new URL(url);
+    if ((parsedCheck.protocol === 'http:' || parsedCheck.protocol === 'https:') && runtimeConfig.lockdownMode) {
+      throw new Error('Lockdown mode prevents ingesting remote content');
+    }
+    if ((parsedCheck.protocol === 'http:' || parsedCheck.protocol === 'https:') && runtimeConfig.obeyRobots) {
+      const allowed = await isAllowedByRobots(url);
+      if (!allowed) throw new Error(`Robots.txt disallows fetching ${url}`);
+    }
+  } catch (err) {
+    if (err instanceof Error) throw err;
+  }
 
   // Optionally render JS-driven pages using Playwright if requested
   let html: string;

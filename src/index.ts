@@ -74,6 +74,16 @@ async function main(): Promise<void> {
       continue;
     }
 
+    if (a === "--no-obey-robots") {
+      opts.obeyRobots = false;
+      continue;
+    }
+
+    if (a === "--obey-robots") {
+      opts.obeyRobots = true;
+      continue;
+    }
+
     // ignore unknown args for forward compatibility
   }
 
@@ -96,6 +106,11 @@ async function main(): Promise<void> {
   if (typeof opts.lockdownMode === "undefined") {
     const v = process.env.AIKEN_LOCKDOWN || process.env.GITHUB_LOCKDOWN || process.env.MCP_LOCKDOWN;
     if (v) opts.lockdownMode = String(v) === "1" || String(v).toLowerCase() === "true";
+  }
+
+  if (typeof opts.obeyRobots === "undefined") {
+    const v2 = process.env.AIKEN_OBEY_ROBOTS || process.env.GITHUB_OBEY_ROBOTS || process.env.MCP_OBEY_ROBOTS;
+    if (v2) opts.obeyRobots = String(v2) === "1" || String(v2).toLowerCase() === "true";
   }
 
   applyCliOptions(opts);
