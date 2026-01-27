@@ -45,6 +45,37 @@ Local knowledge artifacts (in-repo)
 - `src/knowledge/data/documentation/` — local documentation source specs (includes `customAdded.ts`)
 - `src/knowledge/data/libraries/` — curated library specs (e.g., `evolutionSdk.ts`)
 
+CI snippet — setup-aiken (GitHub Actions)
+
+Add a simple GitHub Actions workflow to install Aiken in CI using the official `setup-aiken` action. Put this in `.github/workflows/setup-aiken.yml`:
+
+```yaml
+name: Aiken CI — setup and check
+
+on:
+	push:
+		branches: [ main ]
+	pull_request:
+		branches: [ main ]
+
+jobs:
+	aiken-check:
+		runs-on: ubuntu-latest
+		steps:
+			- uses: actions/checkout@v4
+			- uses: actions/setup-node@v4
+				with:
+					node-version: 20
+			- name: Setup Aiken CLI
+				uses: aiken-lang/setup-aiken@v1
+				with:
+					aiken-version: 'latest'
+			- name: Run aiken check
+				run: aiken check
+```
+
+This provides a minimal CI example that many maintainers will find useful; adjust `aiken-version` or node version as needed.
+
 Testing and developer tasks
 - Integration/test scripts live in `scripts/` (many are plain Node scripts, e.g. `scripts/test_tool_search.js`). There is no single `npm test` wrapper — inspect/execute the script you need.
 - VS Code extension packaging task: see the workspace task "Package VS Code Extension" (runs `vscode-extension/npm install && npm run package`).

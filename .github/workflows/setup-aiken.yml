@@ -1,0 +1,28 @@
+name: Aiken CI — setup and check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  aiken-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Aiken CLI
+        # Use the official setup-aiken action to install Aiken in CI
+        uses: aiken-lang/setup-aiken@v1
+        with:
+          # optional: pin a specific Aiken version or use 'latest'
+          aiken-version: 'latest'
+
+      - name: Run aiken check
+        run: aiken check
