@@ -1,0 +1,37 @@
+name: Batch Ingest & Validate
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 3 * * *'
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: production
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+      EMBEDDING_PROVIDERS: ${{ secrets.EMBEDDING_PROVIDERS }}
+      FAIL_ON_PSEUDO: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Run batch ingest
+        run: npm run ingest:batch
+      - name: Validate vectors
+        run: npm run validate:vectors
+      - name: Upload vectors artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vectors
+          path: var/vectors

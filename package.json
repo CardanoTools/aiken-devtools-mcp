@@ -28,6 +28,8 @@
     "clean": "rm -rf dist",
     "import:awesome": "node scripts/import-awesome-aiken.js",
     "tool-search": "node scripts/tool-search.js",
+    "ingest:batch": "node scripts/batch_ingest.mjs",
+    "validate:vectors": "node scripts/validate_vectors.mjs",
     "test:example": "node scripts/test-example-tool.cjs"
   },
   "dependencies": {
