@@ -49,6 +49,8 @@ Bulk ingest
 
 If you'd like, I can next integrate the MCP `fetch` server for more robust web ingestion or add an automatic summarization step (LLM-based) to produce short abstracts for each proposal.
 
-Tool discovery & categories
+Tool discovery, toolsets & categories
 - The server provides a categorized manifest (`mcp-tools.json`) for host discovery. Use the `aiken_tools_catalog` tool to retrieve a `byCategory` map of available tools, which is convenient for UIs (e.g., VS Code) to show grouped tools.
-
+- Toolsets: group related tools into named sets (e.g., `project`, `knowledge`, `blueprint`). Start the server with `--toolsets <csv>` or set `AIKEN_TOOLSETS` environment variable to enable a set of toolsets at startup.
+- Dynamic toolsets: start the server with `--dynamic-toolsets` to allow runtime enabling/disabling of toolsets via the `aiken_toolsets_enable` tool. Use `aiken_toolsets_list` to inspect available toolsets and currently enabled sets.
+- Lockdown & Insiders: use `--lockdown` to restrict networked tools from running in sensitive environments; use `--insiders` to enable experimental/insiders-only tools (not enabled by default).

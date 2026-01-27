@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { runtimeConfig } from "../runtimeConfig.js";
+import { applyAllowedToolsets } from "../serverWrapper.js";
 
 const listOutputSchema = z.object({ toolsets: z.record(z.array(z.string())), enabled: z.array(z.string()) }).strict();
 const enableInputSchema = z.object({ toolsets: z.array(z.string()).min(1), enable: z.boolean().optional() }).strict();
@@ -46,6 +47,13 @@ export function registerAikenToolsetsTools(server: McpServer): void {
         } else {
           runtimeConfig.allowedToolsets.add(t);
         }
+      }
+
+      // Propagate change to registered tools so enabling/disabling takes effect immediately
+      try {
+        applyAllowedToolsets(runtimeConfig.allowedToolsets);
+      } catch (e) {
+        // ignore - best effort
       }
 
       return { content: [{ type: "text", text: "Toolsets updated" }], structuredContent: { enabled: Array.from(runtimeConfig.allowedToolsets) } };

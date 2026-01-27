@@ -11,6 +11,7 @@ export function attachPolicyWrapper(server: McpServer): void {
   const toolInsidersMap: Record<string, boolean> = {};
   const toolSafetyMap: Record<string, string> = {};
   const toolToolsetsMap: Record<string, string[]> = {};
+  const registeredTools: Record<string, any> = {};
 
   try {
     const p = path.join(process.cwd(), "mcp-tools.json");
@@ -28,7 +29,7 @@ export function attachPolicyWrapper(server: McpServer): void {
     }
 
     // populate toolsets map (toolset -> members) and reverse map (tool -> toolsets)
-    if (parsed.toolsets && typeof parsed.toolsets === 'object') {
+    if (parsed.toolsets && typeof parsed.toolsets === "object") {
       runtimeConfig.toolsetsMap = parsed.toolsets as Record<string, string[]>;
       for (const [tsName, members] of Object.entries(parsed.toolsets)) {
         if (!Array.isArray(members)) continue;
@@ -39,6 +40,25 @@ export function attachPolicyWrapper(server: McpServer): void {
         }
       }
     }
+
+    // expose helper to update registered tools when toolsets are enabled/disabled
+    (attachPolicyWrapper as any).applyAllowedToolsets = function (toolsets: Set<string>) {
+      runtimeConfig.allowedToolsets = new Set(Array.from(toolsets));
+
+      for (const [name, reg] of Object.entries(registeredTools)) {
+        // if the tool is allowed now, enable it; otherwise disable it
+        try {
+          const allow = (toolsets.size > 0 ? Array.from(toolsets).some(ts => (runtimeConfig.toolsetsMap[ts] || []).includes(name)) : true) || (runtimeConfig.allowedTools && runtimeConfig.allowedTools.has(name));
+          if (allow) {
+            if (reg && typeof reg.enable === "function") reg.enable();
+          } else {
+            if (reg && typeof reg.disable === "function") reg.disable();
+          }
+        } catch {
+          // ignore per-tool failures
+        }
+      }
+    };
 
   } catch {
     // ignore - manifest optional
@@ -120,6 +140,13 @@ export function attachPolicyWrapper(server: McpServer): void {
 
     const registered = orig(name, config, wrapped);
 
+    // store registration for dynamic enable/disable when toolsets change
+    try {
+      registeredTools[name] = registered;
+    } catch {
+      // ignore
+    }
+
     // If a tool is marked as insiders-only, disable it unless insiders mode is enabled
     try {
       if ((config && config._meta && config._meta.insiders === true) && !runtimeConfig.insiders) {
@@ -130,10 +157,31 @@ export function attachPolicyWrapper(server: McpServer): void {
       if (runtimeConfig.lockdownMode && (config && config._meta && config._meta.safety === "network")) {
         if (registered && typeof registered.disable === "function") registered.disable();
       }
+
+      // If allowedToolsets is configured and the tool is not in the allowed set, disable it at registration time
+      if (runtimeConfig.allowedToolsets && runtimeConfig.allowedToolsets.size > 0) {
+        const isInAllowedToolset = (config && config._meta && config._meta.toolsets) ? config._meta.toolsets.some((ts: string) => runtimeConfig.allowedToolsets.has(ts)) : false;
+        if (!isInAllowedToolset) {
+          if (registered && typeof registered.disable === "function") registered.disable();
+        }
+      }
     } catch {
       // ignore
     }
 
     return registered;
   };
+}
+
+export function applyAllowedToolsets(toolsets: Set<string>) {
+  // Update runtime config and attempt to propagate the change to already-registered tools if attachPolicyWrapper exposed the helper
+  runtimeConfig.allowedToolsets = new Set(Array.from(toolsets));
+  try {
+    const helper = (attachPolicyWrapper as any).applyAllowedToolsets;
+    if (typeof helper === "function") {
+      helper(toolsets);
+    }
+  } catch {
+    // ignore
+  }
 }

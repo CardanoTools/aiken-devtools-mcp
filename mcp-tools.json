@@ -197,6 +197,7 @@
       "title": "Aiken: Knowledge Index",
       "description": "Index chunks to vector store.",
       "safety": "network",
+      "insiders": true,
       "category": "knowledge"
     },
     {

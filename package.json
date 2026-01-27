@@ -12,7 +12,8 @@
     "dev": "node --watch dist/index.js",
     "clean": "rm -rf dist",
     "test": "npm run build",
-    "import:awesome": "node scripts/import-awesome-aiken.js"
+    "import:awesome": "node scripts/import-awesome-aiken.js",
+    "tool-search": "node scripts/tool-search.js"
   },
   "repository": {
     "type": "git",

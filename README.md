@@ -53,6 +53,14 @@ New knowledge tools:
 
 Tool discovery & categories
 - Run `aiken_tools_catalog` to get a categorized list of tools (the server also exposes `mcp-tools.json` via a resource). Hosts can use this to present tools grouped by feature area (project, blueprint, knowledge, codegen, discovery).
+
+Toolsets & dynamic configuration
+- Start the server with `--toolsets <csv>` to enable named toolsets (e.g., `--toolsets project,knowledge`). You can also set `AIKEN_TOOLSETS` env var for the same effect.
+- Enable `--dynamic-toolsets` to allow runtime enabling/disabling of toolsets. When enabled, use `aiken_toolsets_enable` to toggle toolsets and `aiken_toolsets_list` to inspect available/active sets.
+- Lockdown mode (`--lockdown`) disables network-related tools to reduce exposure in sensitive environments. Insiders mode (`--insiders`) enables experimental tools that are hidden by default.
+
+Tool discovery & search
+- Use the CLI `scripts/tool-search.js` (or `node scripts/tool-search.js <query>`) to search the local manifest quickly. The MCP tool `aiken_tool_search` provides the same search functionality via MCP calls.
 - `aiken_knowledge_read_file`: reads a file from the workspace (including cached knowledge sources) by line range.
 - `aiken_codegen_lucid_evolution`: generates a TypeScript snippet for `@lucid-evolution/lucid` from a validator (via `aiken blueprint convert --to cardano-cli`).
 - `aiken_codegen_evolution_sdk`: (preferred) generates a TypeScript snippet using `@evolution-sdk/evolution` packages from `IntersectMBO/evolution-sdk`.
