@@ -107,40 +107,30 @@ export function resolveWorkspacePath(workspaceRoot: string, relativeOrAbsolutePa
 
 **Recommendation**: Add at least basic tests for critical functions like `resolveWorkspacePath()`, `toIdentifier()`, and schema validation.
 
-### 2. Package Naming Inconsistency
+### 2. ~~Package Naming Inconsistency~~ ✅ FIXED
 
-```json
-"name": "cardano-mcp",  // Generic
-"description": "aiken-devtools - MCP tools for Aiken..."
-"bin": { "aiken-devtools": "..." }
-```
+~~The package name `cardano-mcp` doesn't match the actual purpose (Aiken-specific).~~
 
-The package name `cardano-mcp` doesn't match the actual purpose (Aiken-specific). Should be `aiken-devtools-mcp`.
+**Status**: Fixed - Package renamed to `aiken-devtools-mcp`.
 
 ### 3. Potential Edge Cases
 
-#### a) Type definition placement issue in `aikenBlueprintIntegrationBundle.ts`
+#### a) ~~Type definition placement issue~~ ✅ FIXED
 
-There's a code organization issue where type definitions appear in an unusual location within the file structure around lines 173-197. The types should be moved to module scope for clarity.
+~~Type definitions appeared inside the `normalizeStep` function body.~~
 
-#### b) No output size limits on stdout capture
+**Status**: Fixed - Types moved to module scope in `aikenBlueprintIntegrationBundle.ts`.
 
-In `runAiken.ts` and `runGit.ts`, stdout/stderr are accumulated without limits:
+#### b) ~~No output size limits on stdout capture~~ ✅ FIXED
 
-```typescript
-child.stdout.on("data", (chunk) => {
-  stdout += chunk;  // Could grow unbounded
-});
-```
+~~stdout/stderr were accumulated without limits.~~
 
-If a command produces very large output, this could cause memory issues.
-
-**Recommendation**: Add output size limits:
+**Status**: Fixed - Added 10MB limits to both `runAiken.ts` and `runGit.ts`:
 
 ```typescript
-const MAX_OUTPUT = 10 * 1024 * 1024; // 10MB
+const MAX_OUTPUT_SIZE = 10 * 1024 * 1024; // 10MB limit
 child.stdout.on("data", (chunk) => {
-  if (stdout.length < MAX_OUTPUT) {
+  if (stdout.length < MAX_OUTPUT_SIZE) {
     stdout += chunk;
   }
 });
@@ -168,15 +158,19 @@ const args = ["build", ...(extraArgs ?? [])];
 
 ---
 
-## 🔴 Issues to Address
+## 🔴 Issues ~~to Address~~ RESOLVED
 
-### 1. Code Organization (Priority: Medium)
+### 1. ~~Code Organization~~ ✅ FIXED
 
-The code in `src/tools/aikenBlueprintIntegrationBundle.ts` has type definitions that should be reorganized for better clarity and maintainability.
+~~The code in `src/tools/aikenBlueprintIntegrationBundle.ts` has type definitions that should be reorganized.~~
 
-### 2. Output Size Limits (Priority: Medium)
+**Status**: Fixed - Type definitions moved to module scope.
 
-Add output size limits to prevent potential memory exhaustion from commands with very large output.
+### 2. ~~Output Size Limits~~ ✅ FIXED
+
+~~Add output size limits to prevent potential memory exhaustion.~~
+
+**Status**: Fixed - 10MB limits added to `runAiken.ts` and `runGit.ts`.
 
 ---
 
@@ -187,18 +181,20 @@ Add output size limits to prevent potential memory exhaustion from commands with
 | Command Injection | ✅ Safe | Uses `spawn()` with array args, no shell |
 | Path Traversal | ✅ Safe | `resolveWorkspacePath()` validates paths |
 | Input Validation | ✅ Safe | Zod schemas with `.strict()` |
-| Resource Exhaustion | ⚠️ Medium | No stdout limits, but 5-min timeout helps |
+| Resource Exhaustion | ✅ Safe | 10MB output limits + 5-min timeout |
 | Dependency Chain | ✅ Safe | Only 2 runtime deps, both well-maintained |
 
 ---
 
 ## Recommendations Summary
 
-1. **Add basic tests** - At minimum, test `resolveWorkspacePath()` and critical path validation
-2. **Fix package name** - Rename to `aiken-devtools-mcp` for clarity
-3. **Reorganize code** - Move type definitions to appropriate locations
-4. **Add output limits** - Prevent unbounded stdout/stderr accumulation
-5. **Document limitations** - Add README noting that `aiken` and `git` must be installed
+| Recommendation | Status |
+|----------------|--------|
+| Add basic tests | 🔲 Open |
+| Fix package name | ✅ Fixed |
+| Reorganize code | ✅ Fixed |
+| Add output limits | ✅ Fixed |
+| Document limitations | 🔲 Open |
 
 ---
 
