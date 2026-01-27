@@ -4,8 +4,9 @@
  */
 
 import { KnowledgeSourceSpec } from "../types.js";
+import { AWESOME_AIKEN_EXAMPLE_SOURCES } from "../awesome/awesomeAiken.js";
 
-// Placeholder for future example sources
+// Placeholder for example sources
 export const EXAMPLE_SOURCES: KnowledgeSourceSpec[] = [
-  // Add example knowledge sources here
+  ...AWESOME_AIKEN_EXAMPLE_SOURCES
 ];

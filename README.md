@@ -127,3 +127,15 @@ Request (tool input):
 ```
 
 Returns `snippetTs` and parsed `cardanoCliScript`.
+
+---
+
+## Importing Awesome Aiken (automated)
+
+We've added a small importer script that fetches the curated list from the Awesome Aiken README and turns links into knowledge sources (documentation, libraries, examples).
+
+- Run: `npm run import:awesome`
+- What it does: downloads `https://raw.githubusercontent.com/aiken-lang/awesome-aiken/main/README.md`, parses links, and emits `src/knowledge/awesome/awesomeAiken.ts` (generated).
+- After running, update the repository's cache with: `npx mcp run aiken_knowledge_sync` (or use the MCP tool UI) to clone or update the newly added sources.
+
+If you want, I can run the importer now and add more fine-grained sources or tune category mapping.

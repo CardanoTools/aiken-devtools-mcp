@@ -4,32 +4,9 @@
 
 /**
  * Knowledge source identifiers.
- * Multiple sources can come from the same git repository but different subfolders.
+ * Use a generic string type to allow many dynamic sources (e.g., auto-imported lists).
  */
-export type KnowledgeSource =
-  // Aiken stdlib - utility modules
-  | "stdlib"
-  | "stdlib-aiken"
-  | "stdlib-cardano"
-  // Aiken prelude - core built-ins
-  | "prelude"
-  // Aiken site documentation sections
-  | "site-fundamentals"
-  | "site-language-tour"
-  | "site-installation-instructions"
-  | "site-hello-world"
-  | "site-vesting"
-  | "site-uplc"
-  // Evolution SDK - TypeScript Cardano SDK
-  | "evolution-sdk"
-  | "evolution-docs"
-  | "evolution-docs-addresses"
-  | "evolution-docs-transactions"
-  | "evolution-docs-wallets"
-  | "evolution-docs-providers"
-  | "evolution-docs-smart-contracts"
-  | "evolution-docs-devnet"
-  | "evolution-src";
+export type KnowledgeSource = string;
 
 export type KnowledgeSourceSpec = {
   /** Unique identifier for this knowledge source */
