@@ -384,7 +384,7 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
             if (['image', 'media', 'font', 'stylesheet'].includes(resType)) {
               try {
                 await route.abort();
-              } catch {}
+              } catch { }
               return;
             }
 
@@ -395,7 +395,7 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
             } catch (err) {
               try {
                 await route.continue();
-              } catch {}
+              } catch { }
               return;
             }
 
@@ -406,7 +406,7 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
                 // Abort requests to hosts that resolve to private IPs or fail resolution
                 try {
                   await route.abort();
-                } catch {}
+                } catch { }
                 return;
               }
             }
@@ -419,7 +419,7 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
           } catch (err) {
             try {
               await route.abort();
-            } catch {}
+            } catch { }
           }
         });
       } catch (e) {
@@ -432,16 +432,16 @@ export async function ingestUrl(url: string, opts: IngestOptions = {}): Promise<
 
       try {
         await context.close();
-      } catch {}
+      } catch { }
       try {
         await browser.close();
-      } catch {}
+      } catch { }
     } catch (err) {
       // fallback: if the URL is a data: URL, decode it; otherwise try a plain fetch
       if (browser) {
         try {
           await browser.close();
-        } catch {}
+        } catch { }
       }
 
       try {
