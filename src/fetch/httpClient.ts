@@ -1,9 +1,27 @@
 import http from "node:http";
 import https from "node:https";
 import { checkHostSafe } from "./security.js";
+import { checkRateLimit } from "../rateLimit.js";
 
-export async function fetchUrl(url: string, maxBytes = 200_000): Promise<{ ok: true; status: number; headers: Record<string, string | null>; body: string } | { ok: false; error: string }> {
+/** Maximum redirect hops to prevent infinite loops */
+const MAX_REDIRECTS = 5;
+
+export async function fetchUrl(
+  url: string,
+  maxBytes = 200_000,
+  _redirectCount = 0
+): Promise<{ ok: true; status: number; headers: Record<string, string | null>; body: string } | { ok: false; error: string }> {
   try {
+    // SECURITY: Rate limiting to prevent abuse
+    if (!checkRateLimit("http")) {
+      return { ok: false, error: "Rate limit exceeded. Please wait before making more requests." };
+    }
+
+    // Prevent infinite redirect loops
+    if (_redirectCount > MAX_REDIRECTS) {
+      return { ok: false, error: `too many redirects (max ${MAX_REDIRECTS})` };
+    }
+
     const parsed = new URL(url);
     const lib = parsed.protocol === "https:" ? https : http;
 
@@ -11,7 +29,7 @@ export async function fetchUrl(url: string, maxBytes = 200_000): Promise<{ ok: t
       return { ok: false, error: `unsupported protocol ${parsed.protocol}` };
     }
 
-    // ensure host resolves to a safe address
+    // ensure host resolves to a safe address (SSRF protection)
     try {
       await checkHostSafe(parsed.hostname);
     } catch (err) {
@@ -22,11 +40,12 @@ export async function fetchUrl(url: string, maxBytes = 200_000): Promise<{ ok: t
       const req = lib.get(url, { headers: { "user-agent": "aiken-devtools-mcp/1.0 (+https://github.com/CardanoTools/aiken-devtools-mcp)" } }, (res) => {
         const status = res.statusCode ?? 0;
 
-        // handle redirects
+        // handle redirects - SECURITY: re-check host safety on each redirect
         if (status >= 300 && status < 400 && res.headers.location) {
           const loc = new URL(res.headers.location, parsed).toString();
           res.resume();
-          void fetchUrl(loc, maxBytes).then(resolve);
+          // Pass incremented redirect count to prevent loops and ensure SSRF check on new host
+          void fetchUrl(loc, maxBytes, _redirectCount + 1).then(resolve);
           return;
         }
 

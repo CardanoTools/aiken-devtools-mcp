@@ -85,12 +85,19 @@ export function getErrorMessage(result: { ok: false; error?: string } | { ok: tr
 // STRING UTILITIES
 // ============================================================================
 
+/** Maximum input length for string utilities to prevent DoS */
+const MAX_STRING_INPUT_LENGTH = 10_000;
+
+/** Maximum output length for slugs */
+const MAX_SLUG_LENGTH = 200;
+
 /**
  * Converts a string to a URL-safe slug.
  * - Removes protocol prefixes
  * - Converts to lowercase
  * - Replaces non-alphanumeric characters with hyphens
  * - Removes leading/trailing hyphens
+ * - Enforces length limits
  *
  * @param input - The string to slugify
  * @returns A URL-safe slug string
@@ -100,11 +107,17 @@ export function getErrorMessage(result: { ok: false; error?: string } | { ok: tr
  * slugify("Hello World!") // "hello-world"
  */
 export function slugify(input: string): string {
-  return input
+  // SECURITY: Limit input length to prevent ReDoS or memory issues
+  const truncatedInput = input.slice(0, MAX_STRING_INPUT_LENGTH);
+
+  const slug = truncatedInput
     .toLowerCase()
     .replace(/https?:\/\//, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+
+  // SECURITY: Limit output length
+  return slug.slice(0, MAX_SLUG_LENGTH);
 }
 
 /**
@@ -199,6 +212,9 @@ export interface NormalizedGithubUrl {
   subPath?: string;
 }
 
+/** Maximum URL length for parsing */
+const MAX_URL_LENGTH = 2000;
+
 /**
  * Parses a GitHub URL and extracts repository information.
  * Handles various GitHub URL formats including tree/blob paths.
@@ -214,6 +230,11 @@ export interface NormalizedGithubUrl {
  * // { remoteUrl: "https://github.com/owner/repo.git", owner: "owner", repo: "repo", ref: "main", subPath: "src" }
  */
 export function normalizeGithubUrl(url: string): NormalizedGithubUrl {
+  // SECURITY: Limit URL length
+  if (!url || url.length > MAX_URL_LENGTH) {
+    return { remoteUrl: url?.slice(0, MAX_URL_LENGTH) ?? "" };
+  }
+
   try {
     const parsed = new URL(url);
     if (!parsed.hostname.toLowerCase().includes("github.com")) {
@@ -225,8 +246,13 @@ export function normalizeGithubUrl(url: string): NormalizedGithubUrl {
       return { remoteUrl: url };
     }
 
+    // SECURITY: Validate owner/repo names (alphanumeric, hyphens, underscores)
     const owner = parts[0] ?? "";
     const repo = (parts[1] ?? "").replace(/\.git$/, "");
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(owner) || !/^[a-zA-Z0-9_.-]+$/.test(repo)) {
+      return { remoteUrl: url };
+    }
 
     // Detect tree/blob paths for branch/tag references
     let ref: string | undefined;
@@ -234,8 +260,16 @@ export function normalizeGithubUrl(url: string): NormalizedGithubUrl {
 
     if (parts.length >= 4 && (parts[2] === "tree" || parts[2] === "blob")) {
       ref = parts[3];
+      // SECURITY: Validate ref name
+      if (ref && !/^[a-zA-Z0-9._/-]+$/.test(ref)) {
+        ref = undefined;
+      }
       if (parts.length > 4) {
         subPath = parts.slice(4).join("/");
+        // SECURITY: Prevent path traversal in subPath
+        if (subPath.includes("..")) {
+          subPath = undefined;
+        }
       }
     }
 
@@ -336,20 +370,44 @@ export function validateExtraArgs(args: string[] | undefined, maxArgs = 20): str
   return args;
 }
 
+/** Maximum path length */
+const MAX_PATH_LENGTH = 1000;
+
 /**
- * Validates that a path doesn't contain traversal attempts.
+ * Validates that a path doesn't contain traversal attempts or other unsafe patterns.
  *
  * @param pathStr - The path string to validate
  * @returns True if path is safe
  */
 export function isPathSafe(pathStr: string): boolean {
   if (!pathStr) return true;
+
+  // SECURITY: Limit path length
+  if (pathStr.length > MAX_PATH_LENGTH) return false;
+
   // Check for path traversal patterns
   if (pathStr.includes("..")) return false;
+
+  // Check for home directory expansion
   if (pathStr.includes("~")) return false;
+
+  // Check for null bytes (common injection technique)
+  if (pathStr.includes("\0")) return false;
+
   // Check for absolute paths on Unix/Windows
   if (pathStr.startsWith("/") && !pathStr.startsWith(process.cwd())) return false;
   if (/^[A-Za-z]:/.test(pathStr)) return false;
+
+  // Check for hidden files/directories at the start (security best practice)
+  const segments = pathStr.split(/[/\\]/);
+  for (const segment of segments) {
+    if (segment.startsWith(".") && segment !== "." && segment !== "..") {
+      // Allow current/parent dir refs but warn about hidden files
+      // This is a policy decision - uncomment to block hidden files
+      // return false;
+    }
+  }
+
   return true;
 }
 

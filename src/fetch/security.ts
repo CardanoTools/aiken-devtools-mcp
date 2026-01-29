@@ -132,10 +132,29 @@ export function parseRobotsTxt(robotsText: string, urlPath: string, userAgent = 
 
 const robotsCache: Map<string, { fetchedAt: number; content: string }> = new Map();
 
-async function fetchRobots(robotsUrl: string, maxBytes = 16_000): Promise<{ ok: true; body: string } | { ok: false; error: string }> {
+/** Maximum redirect hops for robots.txt fetch */
+const MAX_ROBOTS_REDIRECTS = 3;
+
+async function fetchRobots(
+  robotsUrl: string,
+  maxBytes = 16_000,
+  _redirectCount = 0
+): Promise<{ ok: true; body: string } | { ok: false; error: string }> {
   try {
+    // Prevent infinite redirect loops
+    if (_redirectCount > MAX_ROBOTS_REDIRECTS) {
+      return { ok: false, error: `too many redirects fetching robots.txt` };
+    }
+
     const parsed = new URL(robotsUrl);
     const lib = parsed.protocol === "https:" ? https : http;
+
+    // SECURITY: Check host safety on each redirect hop
+    try {
+      await checkHostSafe(parsed.hostname);
+    } catch (err) {
+      return { ok: false, error: String(err instanceof Error ? err.message : err) };
+    }
 
     return await new Promise((resolve) => {
       const req = lib.get(robotsUrl, { headers: { "user-agent": "aiken-devtools-mcp/1.0" } }, (res) => {
@@ -143,7 +162,7 @@ async function fetchRobots(robotsUrl: string, maxBytes = 16_000): Promise<{ ok: 
         if (status >= 300 && status < 400 && res.headers.location) {
           const loc = new URL(res.headers.location, parsed).toString();
           res.resume();
-          void fetchRobots(loc, maxBytes).then(resolve);
+          void fetchRobots(loc, maxBytes, _redirectCount + 1).then(resolve);
           return;
         }
 

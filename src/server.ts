@@ -3,6 +3,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { attachPolicyWrapper } from "./serverWrapper.js";
+import { registerAllowedGitBase } from "./git/runGit.js";
+import { getCacheBaseDir } from "./knowledge/core/utils.js";
 import { registerAikenBuildTool } from "./tools/project/aikenBuild.js";
 import { registerAikenBlueprintAddressTool } from "./tools/blueprint/aikenBlueprintAddress.js";
 import { registerAikenBlueprintApplyTool } from "./tools/blueprint/aikenBlueprintApply.js";
@@ -57,6 +59,10 @@ export function createAikenDevtoolsServer(): McpServer {
 
   // attach policy & audit wrapper before registering tools
   attachPolicyWrapper(server);
+
+  // SECURITY: Register allowed directories for git operations
+  registerAllowedGitBase(process.cwd()); // workspace root
+  registerAllowedGitBase(getCacheBaseDir()); // knowledge cache directory
 
   // register manifest as a resource for discovery
   try {
