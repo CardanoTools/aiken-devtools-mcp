@@ -234,6 +234,34 @@
       "description": "A minimal example tool used for testing and docs.",
       "safety": "safe",
       "category": "project"
+    },
+    {
+      "name": "aiken_new",
+      "title": "Aiken: new",
+      "description": "Creates a new Aiken project with `aiken new`.",
+      "safety": "destructive",
+      "category": "project"
+    },
+    {
+      "name": "aiken_toolsets_list",
+      "title": "Aiken: list toolsets",
+      "description": "List available toolsets and currently enabled toolsets.",
+      "safety": "safe",
+      "category": "discovery"
+    },
+    {
+      "name": "aiken_toolsets_enable",
+      "title": "Aiken: enable toolsets",
+      "description": "Enable or disable toolsets at runtime (requires --dynamic-toolsets).",
+      "safety": "destructive",
+      "category": "discovery"
+    },
+    {
+      "name": "aiken_tool_search",
+      "title": "Aiken: tool search",
+      "description": "Search available tools by name, title, or description.",
+      "safety": "safe",
+      "category": "discovery"
     }
   ],
   "toolsets": {
@@ -249,7 +277,8 @@
       "aiken_fmt",
       "aiken_docs",
       "aiken_blueprint_apply",
-      "aiken_example"
+      "aiken_example",
+      "aiken_new"
     ],
     "blueprint": [
       "aiken_blueprint_preamble",
@@ -282,7 +311,10 @@
     ],
     "discovery": [
       "aiken_server_manifest",
-      "aiken_tools_catalog"
+      "aiken_tools_catalog",
+      "aiken_toolsets_list",
+      "aiken_toolsets_enable",
+      "aiken_tool_search"
     ]
   }
 }

@@ -4,15 +4,22 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { resolveWorkspacePath, runAiken } from "../../aiken/runAiken.js";
 import { toAikenToolResult } from "../common/aikenCommon.js";
 
+// Validate hex string to ensure it's valid CBOR hex input
+const validHexString = z.string()
+  .min(1, "CBOR hex is required")
+  .regex(/^[0-9a-fA-F]*$/, "Must be a valid hexadecimal string")
+  .refine(
+    (hex) => hex.length % 2 === 0,
+    "Hex string must have even length (each byte is 2 hex characters)"
+  );
+
 const inputSchema = z
   .object({
     projectDir: z
       .string()
       .optional()
       .describe("Project directory (relative to the current workspace). Defaults to workspace root."),
-    parameterCborHex: z
-      .string()
-      .min(1)
+    parameterCborHex: validHexString
       .describe(
         "The parameter as Plutus Data encoded in CBOR, hex-encoded (required; this tool is non-interactive)."
       ),

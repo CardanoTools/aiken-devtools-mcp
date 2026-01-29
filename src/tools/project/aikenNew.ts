@@ -4,9 +4,19 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { resolveWorkspacePath, runAiken } from "../../aiken/runAiken.js";
 import { toAikenToolResult } from "../common/aikenCommon.js";
 
+// Validate project name to prevent path traversal and command injection
+const safeProjectName = z.string()
+  .min(1, "Project name is required")
+  .max(100, "Project name must be 100 characters or less")
+  .regex(/^[a-zA-Z][a-zA-Z0-9_-]*$/, "Project name must start with a letter and contain only alphanumeric characters, hyphens, and underscores")
+  .refine(
+    (name) => !name.includes("..") && !name.includes("/") && !name.includes("\\"),
+    "Project name cannot contain path separators or parent directory references"
+  );
+
 const inputSchema = z
   .object({
-    name: z.string().describe("Name of the new project."),
+    name: safeProjectName.describe("Name of the new project (must start with a letter, alphanumeric with hyphens/underscores)."),
     projectDir: z
       .string()
       .optional()

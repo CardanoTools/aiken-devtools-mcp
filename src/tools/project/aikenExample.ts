@@ -1,8 +1,8 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-const inputSchema = z.object({ name: z.string().describe("A name for the example") }).strict();
-const outputSchema = z.object({ message: z.string() }).strict();
+const inputSchema = z.object({ name: z.string().describe("A name for the example") }).strict() as z.ZodTypeAny;
+const outputSchema = z.object({ message: z.string() }).strict() as z.ZodTypeAny;
 
 export function registerAikenExampleTool(server: McpServer): void {
   server.registerTool(
@@ -18,8 +18,13 @@ export function registerAikenExampleTool(server: McpServer): void {
         destructiveHint: false
       }
     },
-    async ({ name }) => {
-      return { message: `hello ${name}` };
+    async (args) => {
+      const { name } = args as { name: string };
+      const message = `hello ${name}`;
+      return {
+        content: [{ type: "text" as const, text: message }],
+        structuredContent: { message }
+      };
     }
   );
 }

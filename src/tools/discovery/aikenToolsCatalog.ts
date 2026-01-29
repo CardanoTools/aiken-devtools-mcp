@@ -5,7 +5,7 @@ import path from "node:path";
 
 const outputSchema = z
   .object({
-    byCategory: z.record(z.array(z.object({ name: z.string(), title: z.string(), description: z.string().optional(), safety: z.string().optional(), category: z.string().optional() })))
+    byCategory: z.record(z.string(), z.array(z.object({ name: z.string(), title: z.string(), description: z.string().optional(), safety: z.string().optional(), category: z.string().optional() })))
   })
   .strict();
 

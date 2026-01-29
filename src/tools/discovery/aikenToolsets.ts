@@ -3,7 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { runtimeConfig } from "../../runtimeConfig.js";
 import { applyAllowedToolsets } from "../../serverWrapper.js";
 
-const listOutputSchema = z.object({ toolsets: z.record(z.array(z.string())), enabled: z.array(z.string()) }).strict();
+const listOutputSchema = z.object({ toolsets: z.record(z.string(), z.array(z.string())), enabled: z.array(z.string()) }).strict();
 const enableInputSchema = z.object({ toolsets: z.array(z.string()).min(1), enable: z.boolean().optional() }).strict();
 const enableOutputSchema = z.object({ enabled: z.array(z.string()) }).strict();
 

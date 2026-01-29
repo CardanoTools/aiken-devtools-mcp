@@ -81,11 +81,12 @@ async function tryAnthropic(text: string): Promise<number[] | null> {
 async function tryCohere(text: string): Promise<number[] | null> {
   const apiKey = process.env.COHERE_API_KEY;
   if (!apiKey) return null;
-  const model = process.env.EMBED_COHERE_MODEL ?? 'embed-english-v2.0';
+  const model = process.env.EMBED_COHERE_MODEL ?? 'embed-english-v3.0';
   const input = truncate(text, Number(process.env.COHERE_MAX_INPUT_CHARS ?? 3000));
 
   try {
-    const body = { model, input: [input] };
+    // Cohere v2 API expects 'texts' array and 'input_type' for v3 models
+    const body = { model, texts: [input], input_type: 'search_document' };
     const res = await fetch(COHERE_EMBED_URL, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -93,7 +94,8 @@ async function tryCohere(text: string): Promise<number[] | null> {
     });
     if (!res.ok) return null;
     const data: any = await res.json();
-    const emb = data?.embeddings?.[0]?.embedding ?? null;
+    // Cohere returns { embeddings: [[...], [...]] } - array of arrays
+    const emb = data?.embeddings?.[0] ?? null;
     return Array.isArray(emb) ? (emb as number[]) : null;
   } catch (err) {
     return null;
