@@ -44,11 +44,13 @@ export function createAikenDevtoolsServer(): McpServer {
   const server = new McpServer(
     {
       name: "aiken-devtools-mcp",
-      version: "0.1.0"
+      version: "1.0.0"
     },
     {
       capabilities: {
-        tools: {}
+        tools: {
+          listChanged: true
+        }
       }
     }
   );

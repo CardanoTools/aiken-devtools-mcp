@@ -6,17 +6,36 @@ import { runGit } from "../../git/runGit.js";
 
 const inputSchema = z
   .object({
-    urls: z.array(z.string().url()).optional().describe("List of web URLs to ingest."),
-    gitUrls: z.array(z.string()).optional().describe("List of git repo URLs to ingest."),
-    category: z.enum(["documentation", "library", "example"]).optional(),
-    autoAdd: z.boolean().optional(),
-    commit: z.boolean().optional(),
-    summarize: z.boolean().optional(),
-    renderJs: z.boolean().optional(),
-    autoIndex: z.boolean().optional(),
-    indexCollection: z.string().optional()
+    urls: z.array(z.string().url())
+      .max(50, "Maximum 50 URLs per batch")
+      .optional()
+      .describe("List of web page URLs to fetch, convert to markdown, and propose as knowledge sources."),
+    gitUrls: z.array(z.string())
+      .max(20, "Maximum 20 git repos per batch")
+      .optional()
+      .describe("List of git repository URLs (GitHub, GitLab, etc.) to propose as knowledge sources."),
+    category: z.enum(["documentation", "library", "example"]).optional()
+      .describe("Category for all ingested sources: 'documentation' (guides/API docs), 'library' (code libs), 'example' (sample projects). Default: 'documentation'."),
+    autoAdd: z.boolean().optional()
+      .describe("If true, automatically add proposals to customAdded.ts without manual review. Default: false."),
+    commit: z.boolean().optional()
+      .describe("When autoAdd is true, commit the changes to git. Default: true."),
+    summarize: z.boolean().optional()
+      .describe("Generate AI summaries for each source (requires SUMMARIZER_PROVIDER env var). Default: false."),
+    renderJs: z.boolean().optional()
+      .describe("Use Playwright to render JavaScript-heavy pages before extraction. Slower but better for SPAs. Default: false."),
+    autoIndex: z.boolean().optional()
+      .describe("Compute embeddings and add to vector store (requires EMBEDDING_PROVIDERS env var). Default: false."),
+    indexCollection: z.string()
+      .max(100, "Collection name too long")
+      .optional()
+      .describe("Name for the vector store collection. Default: uses each source's ID.")
   })
-  .strict();
+  .strict()
+  .refine(
+    (data) => (data.urls && data.urls.length > 0) || (data.gitUrls && data.gitUrls.length > 0),
+    { message: "At least one URL or gitUrl is required" }
+  );
 
 const outputSchema = z
   .object({

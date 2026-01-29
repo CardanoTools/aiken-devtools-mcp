@@ -12,13 +12,41 @@ import { chunkText } from "../../knowledge/ingestion/ingest.js";
 
 const inputSchema = z
   .object({
-    proposalId: z.string().optional().describe("Proposal id to index (e.g., 'aiken-lang-site')."),
-    sourceId: z.string().optional().describe("Existing knowledge source id to index (must be synced already)."),
-    collection: z.string().optional().describe("Target collection name for vectors (default: source id or 'proposals')."),
-    chunkSize: z.number().int().positive().optional(),
-    overlap: z.number().int().nonnegative().optional()
+    proposalId: z.string()
+      .max(100, "Proposal ID too long")
+      .optional()
+      .describe("Proposal ID to index (e.g., 'aiken-lang-site'). Get IDs from aiken_knowledge_proposals_list."),
+    sourceId: z.string()
+      .max(100, "Source ID too long")
+      .optional()
+      .describe("Existing knowledge source ID to index. Must be synced first with aiken_knowledge_sync. Get IDs from aiken_knowledge_list."),
+    collection: z.string()
+      .max(100, "Collection name too long")
+      .regex(/^[a-zA-Z0-9_-]+$/, "Collection name must be alphanumeric with hyphens/underscores only")
+      .optional()
+      .describe("Target vector collection name. Default: source ID for sources, 'proposal-{id}' for proposals."),
+    chunkSize: z.number()
+      .int()
+      .min(100, "Chunk size too small (min 100)")
+      .max(10000, "Chunk size too large (max 10000)")
+      .optional()
+      .describe("Characters per text chunk for embedding (100-10000, default: 3000). Smaller = more precise, larger = more context."),
+    overlap: z.number()
+      .int()
+      .nonnegative()
+      .max(2000, "Overlap too large (max 2000)")
+      .optional()
+      .describe("Character overlap between chunks (0-2000, default: 200). Helps maintain context across chunk boundaries.")
   })
-  .strict();
+  .strict()
+  .refine(
+    (data) => data.proposalId || data.sourceId,
+    { message: "Either proposalId or sourceId is required" }
+  )
+  .refine(
+    (data) => !data.overlap || !data.chunkSize || data.overlap < data.chunkSize,
+    { message: "Overlap must be less than chunkSize" }
+  );
 
 const outputSchema = z
   .object({

@@ -6,14 +6,28 @@ import { ALL_KNOWLEDGE_SOURCES } from "../../knowledge/index.js";
 
 const inputSchema = z
   .object({
-    ids: z.array(z.string()).optional().describe("List of knowledge source ids to return."),
+    ids: z.array(z.string())
+      .max(100, "Maximum 100 IDs per query")
+      .optional()
+      .describe("Specific knowledge source IDs to return. If empty, returns all sources matching other filters."),
     category: z
       .enum(["documentation", "library", "example"])
       .optional()
-      .describe("Filter by category."),
-    query: z.string().min(1).optional().describe("Text to filter ids or descriptions (case-insensitive)."),
-    include: z.enum(["compact", "full"]).optional().describe("Return compact or full specs (default: compact)."),
-    limit: z.number().int().positive().optional().describe("Max number of results (default: 200).")
+      .describe("Filter by category: 'documentation' (guides/API), 'library' (code), 'example' (samples)."),
+    query: z.string()
+      .min(1)
+      .max(200, "Query too long")
+      .optional()
+      .describe("Text filter for IDs and descriptions (case-insensitive substring match)."),
+    include: z.enum(["compact", "full"]).optional().describe(
+      "Output format: 'compact' (minimal fields, less tokens) or 'full' (all fields). Default: 'compact'."
+    ),
+    limit: z.number()
+      .int()
+      .positive()
+      .max(1000, "Maximum limit is 1000")
+      .optional()
+      .describe("Maximum results to return (1-1000, default: 200). Use smaller values for faster responses.")
   })
   .strict();
 

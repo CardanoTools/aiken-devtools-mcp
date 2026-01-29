@@ -7,8 +7,8 @@ import { resolveWorkspacePath } from "../aiken/runAiken.js";
 const blueprintSchema = z
   .object({
     preamble: z.unknown().optional(),
-    validators: z.array(z.record(z.unknown())).optional(),
-    definitions: z.record(z.unknown()).optional()
+    validators: z.array(z.record(z.string(), z.unknown())).optional(),
+    definitions: z.record(z.string(), z.unknown()).optional()
   })
   .passthrough();
 

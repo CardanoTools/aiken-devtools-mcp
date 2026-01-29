@@ -19,14 +19,26 @@ const scopeSchema = z.enum(SCOPE_IDS as unknown as [string, ...string[]]);
 
 const inputSchema = z
   .object({
-    query: z.string().min(1).describe("Text to search for (case-insensitive)."),
-    scope: scopeSchema.optional().describe("Where to search (default: all). Use 'core' for essentials, 'examples' for patterns."),
-    maxResults: z.number().int().positive().max(50).optional().describe("Maximum matches to return (default: 10)."),
-    maxFiles: z.number().int().positive().max(1000).optional().describe("Maximum files to scan per scope (default: 500)."),
+    query: z.string()
+      .min(1, "Query cannot be empty")
+      .max(500, "Query too long (max 500 chars)")
+      .describe("Text to search for (case-insensitive). Keep queries focused for best results."),
+    scope: scopeSchema.optional().describe(
+      "Search scope. Options: 'project' (current workspace), 'core' (stdlib+prelude), " +
+      "'examples' (code patterns), 'libraries', 'docs', 'extended' (examples+libs), " +
+      "'all' (everything), or a specific source ID. Default: 'all'."
+    ),
+    maxResults: z.number().int().positive().max(50).optional().describe(
+      "Maximum matches to return (1-50, default: 10). Higher values increase token usage."
+    ),
+    maxFiles: z.number().int().positive().max(1000).optional().describe(
+      "Maximum files to scan per scope (1-1000, default: 500). Use lower values for faster searches."
+    ),
     fileExtensions: z
-      .array(z.string())
+      .array(z.string().regex(/^\.[a-z0-9]+$/i, "Extension must start with '.' (e.g., '.ak')"))
+      .max(10, "Maximum 10 file extensions")
       .optional()
-      .describe("File extensions to include (default: ['.ak','.md']).")
+      .describe("File extensions to include (default: ['.ak', '.md', '.toml']). Must start with '.'")
   })
   .strict();
 

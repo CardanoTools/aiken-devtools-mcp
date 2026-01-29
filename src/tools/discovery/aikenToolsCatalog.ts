@@ -3,9 +3,22 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { emptyInputSchema, createErrorResponse, createSuccessResponse, type UnknownRecord } from "../common/utils.js";
+
+/** Schema for tool entries in catalog */
+const toolEntrySchema = z.object({
+  name: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  safety: z.enum(["safe", "destructive", "network"]).optional(),
+  category: z.string().optional()
+});
+
 const outputSchema = z
   .object({
-    byCategory: z.record(z.array(z.object({ name: z.string(), title: z.string(), description: z.string().optional(), safety: z.string().optional(), category: z.string().optional() })))
+    categoryCount: z.number().int().nonnegative(),
+    toolCount: z.number().int().nonnegative(),
+    byCategory: z.record(z.string(), z.array(toolEntrySchema))
   })
   .strict();
 
@@ -14,28 +27,53 @@ export function registerAikenToolsCatalogTool(server: McpServer): void {
     "aiken_tools_catalog",
     {
       title: "Aiken: tools catalog",
-      description: "Return a categorized listing of available tools for host discovery.",
+      description:
+        "Returns all available tools grouped by category (project, blueprint, knowledge, codegen, discovery). " +
+        "Use this to get a quick overview of tool capabilities. " +
+        "For searching specific tools, use aiken_tool_search instead.",
+      inputSchema: emptyInputSchema,
       outputSchema,
       annotations: { readOnlyHint: true, idempotentHint: true, destructiveHint: false, openWorldHint: false }
     },
     async () => {
       try {
-        const p = path.join(process.cwd(), "mcp-tools.json");
-        const raw = await fs.readFile(p, "utf8");
-        const parsed = JSON.parse(raw) as { tools?: Array<Record<string, any>> };
+        const manifestPath = path.join(process.cwd(), "mcp-tools.json");
+        const raw = await fs.readFile(manifestPath, "utf8");
+        const parsed = JSON.parse(raw) as { tools?: UnknownRecord[] };
         const tools = Array.isArray(parsed.tools) ? parsed.tools : [];
 
-        const byCategory: Record<string, Array<Record<string, any>>> = {};
+        const byCategory: Record<string, z.infer<typeof toolEntrySchema>[]> = {};
+        let toolCount = 0;
+
         for (const t of tools) {
-          const cat = String(t.category ?? "uncategorized");
+          if (!t || typeof t.name !== "string") continue;
+
+          const cat = typeof t.category === "string" ? t.category : "uncategorized";
           if (!byCategory[cat]) byCategory[cat] = [];
-          const arr = byCategory[cat] as Array<Record<string, any>>;
-          arr.push(t as any);
+
+          const entry: z.infer<typeof toolEntrySchema> = {
+            name: t.name,
+            title: typeof t.title === "string" ? t.title : t.name,
+            description: typeof t.description === "string" ? t.description : undefined,
+            safety: typeof t.safety === "string" && ["safe", "destructive", "network"].includes(t.safety)
+              ? t.safety as "safe" | "destructive" | "network"
+              : undefined,
+            category: cat
+          };
+
+          byCategory[cat]!.push(entry);
+          toolCount++;
         }
 
-        return { content: [{ type: "text", text: "Catalog returned" }], structuredContent: { byCategory } };
+        const categoryCount = Object.keys(byCategory).length;
+
+        return createSuccessResponse(
+          `Catalog: ${toolCount} tools in ${categoryCount} categories`,
+          { categoryCount, toolCount, byCategory }
+        );
       } catch (err) {
-        return { isError: true, content: [{ type: "text", text: `Failed to read manifest: ${String(err)}` }] };
+        const message = err instanceof Error ? err.message : String(err);
+        return createErrorResponse(`Failed to read manifest: ${message}`);
       }
     }
   );

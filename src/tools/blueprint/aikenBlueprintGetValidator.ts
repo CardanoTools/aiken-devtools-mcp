@@ -46,8 +46,8 @@ const outputSchema = z
     cwd: z.string(),
     blueprintFilePath: z.string(),
     preamble: z.unknown().optional(),
-    validator: z.record(z.unknown()),
-    definitions: z.record(z.unknown()).optional()
+    validator: z.record(z.string(), z.unknown()),
+    definitions: z.record(z.string(), z.unknown()).optional()
   })
   .strict();
 

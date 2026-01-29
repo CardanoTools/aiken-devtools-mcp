@@ -40,8 +40,8 @@ export function registerAikenVersionTool(server: McpServer): void {
         openWorldHint: false
       }
     },
-    async (input: { projectDir?: string }) => {
-      const { projectDir } = input;
+    async (input) => {
+      const { projectDir } = input as { projectDir?: string };
       const workspaceRoot = process.cwd();
       const cwd = resolveWorkspacePath(workspaceRoot, projectDir);
       const result = await runAiken({ cwd, args: ["--version"], timeoutMs: 20_000 });
