@@ -3,6 +3,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { emptyInputSchema, createErrorResponse, createSuccessResponse } from "../common/utils.js";
+
 /**
  * Schema for a single tool entry in the manifest
  */
@@ -34,7 +36,8 @@ export function registerAikenServerManifestTool(server: McpServer): void {
       description:
         "Returns the MCP server's tool manifest (mcp-tools.json) containing all registered tools, " +
         "their schemas, safety classifications, categories, and toolsets for service discovery and introspection. " +
-        "Use this to understand what tools are available and how they are organized.",
+        "Use this tool first to understand what tools are available and how they are organized before calling other tools.",
+      inputSchema: emptyInputSchema,
       outputSchema,
       annotations: {
         readOnlyHint: true,

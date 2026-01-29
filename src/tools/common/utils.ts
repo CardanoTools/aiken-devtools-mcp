@@ -3,6 +3,88 @@
  * Centralizes common operations to avoid code duplication.
  */
 
+import { z } from "zod";
+
+// ============================================================================
+// CONSTANTS - Centralized magic numbers and defaults
+// ============================================================================
+
+/** Default chunk size for text embedding (characters) */
+export const DEFAULT_CHUNK_SIZE = 3000;
+
+/** Default overlap between chunks (characters) */
+export const DEFAULT_CHUNK_OVERLAP = 200;
+
+/** Default network ID for Cardano (0 = testnet, 1 = mainnet) */
+export const DEFAULT_NETWORK_ID = 0;
+
+/** Maximum line length for search result previews */
+export const MAX_PREVIEW_LINE_LENGTH = 240;
+
+/** Maximum characters for metadata preview in vectors */
+export const MAX_METADATA_PREVIEW_LENGTH = 256;
+
+/** Maximum results for knowledge search */
+export const DEFAULT_MAX_SEARCH_RESULTS = 10;
+
+/** Maximum files to scan in knowledge search */
+export const DEFAULT_MAX_SEARCH_FILES = 500;
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/** Standard result type for operations that can fail */
+export type OperationResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string };
+
+/** Blueprint read result discriminated union */
+export type BlueprintResult =
+  | { ok: true; cwd: string; blueprintFile: { path: string }; blueprint: unknown }
+  | { ok: false; cwd: string; blueprintFile: { path: string }; error: string };
+
+/** Unknown record type for dynamic objects */
+export type UnknownRecord = Record<string, unknown>;
+
+// ============================================================================
+// TYPE GUARDS
+// ============================================================================
+
+/**
+ * Type guard to check if a blueprint result is successful.
+ */
+export function isBlueprintOk(result: BlueprintResult): result is BlueprintResult & { ok: true } {
+  return result.ok === true;
+}
+
+/**
+ * Type guard to check if a blueprint result is an error.
+ */
+export function isBlueprintError(result: BlueprintResult): result is BlueprintResult & { ok: false } {
+  return result.ok === false;
+}
+
+/**
+ * Type guard for operation results.
+ */
+export function isOperationOk<T>(result: OperationResult<T>): result is { ok: true; data: T } {
+  return result.ok === true;
+}
+
+/**
+ * Safely extracts error message from a failed operation result.
+ * Avoids unsafe type casts.
+ */
+export function getErrorMessage(result: { ok: false; error?: string } | { ok: true }): string {
+  if (result.ok) return "";
+  return (result as { ok: false; error?: string }).error ?? "Unknown error";
+}
+
+// ============================================================================
+// STRING UTILITIES
+// ============================================================================
+
 /**
  * Converts a string to a URL-safe slug.
  * - Removes protocol prefixes
@@ -47,6 +129,77 @@ export function splitTitle(title: string): { module?: string; name?: string } {
 }
 
 /**
+ * Truncates a string to a maximum length, adding ellipsis if truncated.
+ *
+ * @param str - The string to truncate
+ * @param maxLength - Maximum length (default: 200)
+ * @returns The truncated string with ellipsis if needed
+ */
+export function truncateString(str: string, maxLength = 200): string {
+  if (str.length <= maxLength) return str;
+  return str.slice(0, maxLength - 1) + "…";
+}
+
+/**
+ * Validates that a string is valid hexadecimal.
+ *
+ * @param hex - The string to validate
+ * @returns True if the string is valid hex with even length
+ */
+export function isValidHex(hex: string): boolean {
+  if (hex.length % 2 !== 0) return false;
+  return /^[0-9a-fA-F]*$/.test(hex);
+}
+
+// ============================================================================
+// OBJECT UTILITIES
+// ============================================================================
+
+/**
+ * Safely extracts a string value from an unknown object.
+ *
+ * @param obj - The object to extract from
+ * @param key - The key to look up
+ * @returns The string value or undefined
+ */
+export function getStringFromObject(obj: unknown, key: string): string | undefined {
+  if (obj === null || typeof obj !== "object") return undefined;
+  const value = (obj as UnknownRecord)[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+/**
+ * Safely extracts a number value from an unknown object.
+ */
+export function getNumberFromObject(obj: unknown, key: string): number | undefined {
+  if (obj === null || typeof obj !== "object") return undefined;
+  const value = (obj as UnknownRecord)[key];
+  return typeof value === "number" ? value : undefined;
+}
+
+/**
+ * Safely extracts a boolean value from an unknown object.
+ */
+export function getBooleanFromObject(obj: unknown, key: string): boolean | undefined {
+  if (obj === null || typeof obj !== "object") return undefined;
+  const value = (obj as UnknownRecord)[key];
+  return typeof value === "boolean" ? value : undefined;
+}
+
+// ============================================================================
+// URL UTILITIES
+// ============================================================================
+
+/** Result type for normalized GitHub URLs */
+export interface NormalizedGithubUrl {
+  remoteUrl: string;
+  owner?: string;
+  repo?: string;
+  ref?: string;
+  subPath?: string;
+}
+
+/**
  * Parses a GitHub URL and extracts repository information.
  * Handles various GitHub URL formats including tree/blob paths.
  *
@@ -60,13 +213,7 @@ export function splitTitle(title: string): { module?: string; name?: string } {
  * normalizeGithubUrl("https://github.com/owner/repo/tree/main/src")
  * // { remoteUrl: "https://github.com/owner/repo.git", owner: "owner", repo: "repo", ref: "main", subPath: "src" }
  */
-export function normalizeGithubUrl(url: string): {
-  remoteUrl: string;
-  owner?: string;
-  repo?: string;
-  ref?: string;
-  subPath?: string;
-} {
+export function normalizeGithubUrl(url: string): NormalizedGithubUrl {
   try {
     const parsed = new URL(url);
     if (!parsed.hostname.toLowerCase().includes("github.com")) {
@@ -103,6 +250,10 @@ export function normalizeGithubUrl(url: string): {
     return { remoteUrl: url };
   }
 }
+
+// ============================================================================
+// MCP RESPONSE HELPERS
+// ============================================================================
 
 /**
  * Creates a standardized MCP error response.
@@ -148,38 +299,109 @@ export function createSuccessResponse<T extends Record<string, unknown>>(
   return response;
 }
 
+// ============================================================================
+// VALIDATION UTILITIES
+// ============================================================================
+
+/** Dangerous patterns that could indicate command injection */
+const DANGEROUS_ARG_PATTERNS = [
+  /^-{1,2}[^-]/,  // Allow flags like --flag or -f
+  /[;&|`$(){}[\]<>]/,  // Block shell metacharacters
+  /\.\./,  // Block path traversal
+];
+
 /**
- * Validates that a string is valid hexadecimal.
+ * Validates extraArgs for potential command injection.
+ * Returns sanitized args or throws an error.
  *
- * @param hex - The string to validate
- * @returns True if the string is valid hex with even length
+ * @param args - Array of extra arguments to validate
+ * @param maxArgs - Maximum number of args allowed (default: 20)
+ * @returns The validated args array
+ * @throws Error if validation fails
  */
-export function isValidHex(hex: string): boolean {
-  if (hex.length % 2 !== 0) return false;
-  return /^[0-9a-fA-F]*$/.test(hex);
+export function validateExtraArgs(args: string[] | undefined, maxArgs = 20): string[] {
+  if (!args || args.length === 0) return [];
+
+  if (args.length > maxArgs) {
+    throw new Error(`Too many extra arguments (max ${maxArgs})`);
+  }
+
+  for (const arg of args) {
+    // Check for shell metacharacters (except in quoted strings)
+    if (/[;&|`$(){}[\]<>]/.test(arg)) {
+      throw new Error(`Invalid character in argument: ${arg.slice(0, 20)}`);
+    }
+  }
+
+  return args;
 }
 
 /**
- * Truncates a string to a maximum length, adding ellipsis if truncated.
+ * Validates that a path doesn't contain traversal attempts.
  *
- * @param str - The string to truncate
- * @param maxLength - Maximum length (default: 200)
- * @returns The truncated string with ellipsis if needed
+ * @param pathStr - The path string to validate
+ * @returns True if path is safe
  */
-export function truncateString(str: string, maxLength = 200): string {
-  if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength - 1) + "…";
+export function isPathSafe(pathStr: string): boolean {
+  if (!pathStr) return true;
+  // Check for path traversal patterns
+  if (pathStr.includes("..")) return false;
+  if (pathStr.includes("~")) return false;
+  // Check for absolute paths on Unix/Windows
+  if (pathStr.startsWith("/") && !pathStr.startsWith(process.cwd())) return false;
+  if (/^[A-Za-z]:/.test(pathStr)) return false;
+  return true;
 }
 
 /**
- * Safely extracts a string value from an unknown object.
+ * Validates a git ref (branch/tag name) for safe characters.
  *
- * @param obj - The object to extract from
- * @param key - The key to look up
- * @returns The string value or undefined
+ * @param ref - The git ref to validate
+ * @returns True if ref is safe
  */
-export function getStringFromObject(obj: unknown, key: string): string | undefined {
-  if (obj === null || typeof obj !== "object") return undefined;
-  const value = (obj as Record<string, unknown>)[key];
-  return typeof value === "string" ? value : undefined;
+export function isGitRefSafe(ref: string): boolean {
+  if (!ref) return true;
+  // Git refs can contain alphanumeric, hyphens, underscores, slashes, and dots
+  // But not consecutive dots, start with dot/slash, or end with dot/lock
+  if (/^[./]|\.{2}|\.lock$|[~^:?*\[\]\\@{}\s]/.test(ref)) return false;
+  return /^[a-zA-Z0-9._/-]+$/.test(ref);
 }
+
+// ============================================================================
+// ZOD SCHEMA HELPERS
+// ============================================================================
+
+/**
+ * Creates an empty Zod object schema for tools with no input.
+ * Ensures consistency across discovery tools.
+ */
+export const emptyInputSchema = z.object({}).strict();
+
+/**
+ * Common schema for projectDir parameter.
+ */
+export const projectDirSchema = z
+  .string()
+  .optional()
+  .refine((p) => !p || isPathSafe(p), { message: "Invalid path: contains traversal characters" })
+  .describe("Project directory (relative to workspace root). Default: workspace root.");
+
+/**
+ * Common schema for extraArgs parameter with validation.
+ */
+export const extraArgsSchema = z
+  .array(z.string().max(200, "Argument too long"))
+  .max(20, "Maximum 20 extra arguments")
+  .optional()
+  .describe("Additional CLI arguments to pass. Use sparingly.");
+
+/**
+ * Common schema for output paths with validation.
+ */
+export const outputPathSchema = z
+  .string()
+  .max(500, "Path too long")
+  .refine((p) => isPathSafe(p), { message: "Invalid output path: contains traversal characters" })
+  .optional()
+  .describe("Output file path (relative to project). Must not contain '..'.");
+
