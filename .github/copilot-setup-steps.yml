@@ -1,0 +1,20 @@
+name: Setup development environment for Copilot
+description: Pre-install dependencies and tools needed for aiken-devtools-mcp development
+
+steps:
+  # Install Node.js dependencies
+  - name: Install npm dependencies
+    run: npm install
+
+  # Build the project so tools are available
+  - name: Build the project
+    run: npm run build
+
+  # Verify the build produced the expected output
+  - name: Verify build output
+    run: |
+      if [ ! -f dist/index.cjs ]; then
+        echo "Error: Build did not produce dist/index.cjs"
+        exit 1
+      fi
+      echo "Build verified successfully"
