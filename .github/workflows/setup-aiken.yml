@@ -22,7 +22,7 @@ jobs:
         uses: aiken-lang/setup-aiken@v1
         with:
           # optional: pin a specific Aiken version or use 'latest'
-          aiken-version: 'latest'
+          version: 'latest'
 
       - name: Run aiken check
         run: aiken check

@@ -4,6 +4,9 @@ import { z } from "zod";
 
 import { resolveWorkspacePath } from "../aiken/runAiken.js";
 
+/** Maximum blueprint file size (10MB) - prevents memory exhaustion DoS */
+const MAX_BLUEPRINT_SIZE_BYTES = 10 * 1024 * 1024;
+
 const blueprintSchema = z
   .object({
     preamble: z.unknown().optional(),
@@ -46,6 +49,17 @@ export async function readBlueprint(params: ReadBlueprintArgs): Promise<ReadBlue
   const blueprintFilePath = resolveWorkspacePath(workspaceRoot, candidate);
 
   try {
+    // SECURITY: Check file size before reading to prevent memory exhaustion
+    const stats = await fs.stat(blueprintFilePath);
+    if (stats.size > MAX_BLUEPRINT_SIZE_BYTES) {
+      return {
+        ok: false,
+        cwd,
+        blueprintFile: { path: blueprintFilePath },
+        error: `Blueprint file too large (${Math.round(stats.size / 1024 / 1024)}MB). Maximum allowed: ${MAX_BLUEPRINT_SIZE_BYTES / 1024 / 1024}MB.`
+      };
+    }
+
     const raw = await fs.readFile(blueprintFilePath, "utf8");
 
     let parsed: unknown;
