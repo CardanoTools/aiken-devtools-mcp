@@ -22,7 +22,7 @@ When writing tests for aiken-devtools-mcp, follow these patterns:
 ```typescript
 import { describe, test, expect, beforeEach } from 'vitest';
 
-describe('aiken_example_tool', () => {
+describe('Aiken Example Tool', () => {
   beforeEach(() => {
     // Setup test state
   });

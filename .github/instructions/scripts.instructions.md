@@ -27,6 +27,9 @@ When writing integration scripts for aiken-devtools-mcp, follow these patterns:
  * Usage: node scripts/test-tool.mjs [options]
  */
 
+// Adjust the import path based on script location
+// For scripts/ use '../dist/index.cjs'
+// For scripts/tools/ use '../../dist/index.cjs'
 import { someFunction } from '../dist/index.cjs';
 
 async function main() {
