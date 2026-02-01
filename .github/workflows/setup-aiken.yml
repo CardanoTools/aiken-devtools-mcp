@@ -21,8 +21,8 @@ jobs:
         # Use the official setup-aiken action to install Aiken in CI
         uses: aiken-lang/setup-aiken@v1
         with:
-          # optional: pin a specific Aiken version or use 'latest'
-          version: 'latest'
+          # Pin a specific Aiken version (see https://github.com/aiken-lang/aiken/releases)
+          version: 'v1.1.21'
 
       - name: Run aiken check
         run: aiken check
